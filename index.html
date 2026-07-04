@@ -580,7 +580,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   </div>
   <div class="foot">
     <div class="top"><span class="lab">Wed, Jun 17, 2026, 05:22 PM ET</span><button class="redo" onclick="location.reload()">↺ replay briefing</button></div>
-    <p class="disclaimer"><b style="color:var(--fg-dim)">Internal research note — not investment advice.</b> A coverage-universe scan narrowed to overnight movers, one analyst agent per surviving name, synthesized by a CIO pass. Sparklines and the ticker are illustrative (no intraday tick data on this feed). Conviction bands are ordinal and uncalibrated; no probabilities, no position sizing.</p>
+    <p class="disclaimer"><b style="color:var(--fg-dim)">Internal research note — not investment advice.</b> A coverage-universe scan narrowed to overnight movers, one analyst agent per surviving name, synthesized by a CIO pass. Sparklines and the ticker are illustrative (no intraday tick data on this feed). Conviction bands are ordinal and uncalibrated; no probabilities, no position sizing. Options plays are structural expressions of the desk&#8217;s directional calls — implied volatility is not sourced from live options data.</p>
     <div class="prov" id="pProv"></div>
   </div>
 </div>
@@ -825,12 +825,14 @@ function renderHCM() {
     '<div class="hcm-plevel-row"><span class="hcm-plevel">Key level → ' + escc(p.keyLevel) + '</span><button class="hcm-info">▸ Details</button></div>' +
     '<div class="hcm-pdetail"><div class="hcm-ppill"><span class="pp-lab">IV</span><span>' + escc(p.iv) + '</span></div><div class="hcm-ppill"><span class="pp-lab">Confirms</span><span>' + escc(p.confirms) + '</span></div></div>' +
     '</div>';
+  const bo = hcm.breakout || [], bd = hcm.breakdown || [];
+  const emptyPlay = (label) => '<div style="padding:14px 4px;font-size:12px;color:var(--fg-mute)">No ' + label + ' setups this morning — nothing cleared the desk.</div>';
   const boHTML = '<div class="hcm-card hcm-bo">' +
-    '<div class="hcm-hd"><span class="hcm-t">Breakout plays</span><span class="hcm-count">' + hcm.breakout.length + (hcm.breakout.length === 1 ? ' watch' : ' watches') + '</span></div>' +
-    hcm.breakout.map(playHTML).join('') + '</div>';
+    '<div class="hcm-hd"><span class="hcm-t">Breakout plays</span><span class="hcm-count">' + bo.length + (bo.length === 1 ? ' watch' : ' watches') + '</span></div>' +
+    (bo.length ? bo.map(playHTML).join('') : emptyPlay('breakout')) + '</div>';
   const bdHTML = '<div class="hcm-card hcm-bd">' +
-    '<div class="hcm-hd"><span class="hcm-t">Breakdown plays</span><span class="hcm-count">' + hcm.breakdown.length + (hcm.breakdown.length === 1 ? ' watch' : ' watches') + '</span></div>' +
-    hcm.breakdown.map(playHTML).join('') + '</div>';
+    '<div class="hcm-hd"><span class="hcm-t">Breakdown plays</span><span class="hcm-count">' + bd.length + (bd.length === 1 ? ' watch' : ' watches') + '</span></div>' +
+    (bd.length ? bd.map(playHTML).join('') : emptyPlay('breakdown')) + '</div>';
   $('hcmBand').innerHTML = '<div class="hcm-grid">' + buyHTML + boHTML + bdHTML + '</div>';
 
   // Lock buy card height after first paint so carousel switches never resize the card
