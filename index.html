@@ -149,7 +149,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .split{display:grid;grid-template-columns:1.4fr 1fr;gap:22px}
 @media(max-width:900px){.split{grid-template-columns:1fr}}
 .hero-col{display:flex;flex-direction:column;gap:0;min-width:0;position:relative}
-.hero-pip-row{position:absolute;top:16px;left:0;right:0;display:flex;justify-content:center;gap:5px;align-items:center;z-index:2;pointer-events:none}
+.hero-pip-row,.hcm-pip-row{position:absolute;top:16px;left:0;right:0;display:flex;justify-content:center;gap:5px;align-items:center;z-index:2;pointer-events:none}
 .hero-pip{width:6px;height:6px;border-radius:999px;background:rgba(180,180,185,.45);cursor:pointer;transition:width .2s var(--ease),background .2s var(--ease);flex:none;pointer-events:auto}
 .hero-pip.active{width:16px;background:var(--fg-mute)}
 .hero{border:1px solid var(--line-2);border-radius:18px;background:var(--bg);padding:42px 28px 26px;box-shadow:0 10px 30px rgba(31,30,27,.06);overflow:hidden}
@@ -245,7 +245,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 @media(max-width:960px){.hcm-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:640px){.hcm-grid{grid-template-columns:1fr}}
 .hcm-card{border:1px solid var(--line);border-radius:16px;background:var(--bg);padding:18px 20px;display:flex;flex-direction:column}
-.hcm-buy{border-color:rgba(176,122,46,.30);background:rgba(176,122,46,.025)}
+.hcm-buy{position:relative;border-color:rgba(176,122,46,.30);background:rgba(176,122,46,.025)}
 .hcm-buy.hcm-r1{background:rgba(212,175,55,.18);border-color:rgba(212,175,55,.44)}
 .hcm-buy.hcm-r2{background:rgba(180,180,185,.16);border-color:rgba(180,180,185,.42)}
 .hcm-buy.hcm-r3{background:rgba(155,82,28,.13);border-color:rgba(155,82,28,.33)}
@@ -824,6 +824,7 @@ function renderHCM() {
 
   const buyHTML = buys.length ?
     '<div class="hcm-card hcm-buy hcm-r1" id="hcmBuyCard">' +
+    (buys.length > 1 ? '<div class="hcm-pip-row" id="hcmPips">' + buys.map((_, i) => '<span class="hero-pip' + (i === 0 ? ' active' : '') + '" data-i="' + i + '"></span>').join('') + '</div>' : '') +
     '<div class="hcm-hd"><span class="hcm-t" id="hcmBuyLab">Highest conviction</span>' + countHTML + '</div>' +
     '<div class="hcm-buy-vp" id="hcmBuySlides">' + buildBuySlide(buys[0]) + '</div>' +
     '</div>' :
@@ -892,6 +893,8 @@ function renderHCM() {
       $('hcmBuyCard').className = 'hcm-card hcm-buy hcm-r' + (buyIdx + 1);
       var cnt = $('hcmCount');
       if (cnt) cnt.textContent = (buyIdx + 1) + ' / ' + buys.length;
+      var pipRow = $('hcmPips');
+      if (pipRow) pipRow.querySelectorAll('.hero-pip').forEach(function(p, j) { p.classList.toggle('active', j === buyIdx); });
 
       setTimeout(function() {
         var v = $('hcmBuySlides');
@@ -902,6 +905,8 @@ function renderHCM() {
     }
     var cntEl = $('hcmCount');
     if (cntEl) cntEl.onclick = function() { goToBuy(buyIdx + 1, true); };
+    var pipEls = $('hcmPips');
+    if (pipEls) pipEls.querySelectorAll('.hero-pip').forEach(function(pip) { pip.onclick = function() { goToBuy(parseInt(this.dataset.i)); }; });
     var touchX = null;
     $('hcmBuyCard').addEventListener('touchstart', function(e) { touchX = e.touches[0].clientX; }, { passive: true });
     $('hcmBuyCard').addEventListener('touchend', function(e) {
