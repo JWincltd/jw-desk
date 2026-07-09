@@ -243,6 +243,29 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-none{flex:1;display:flex;align-items:center;min-height:56px;font-size:12px;color:var(--fg-mute);line-height:1.55}
 .hcm-rec{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--fg-mute);letter-spacing:.03em;margin:-6px 0 10px}
 .hcm-rec .up{color:var(--positive)}.hcm-rec .dn{color:var(--danger)}
+/* ===== thesis desk (structural ideas) ===== */
+.th-band{max-width:1180px;margin:0 auto;padding:0 28px 18px}
+@media(max-width:640px){.th-band{padding:0 16px 14px}}
+.th-card{border:1px solid var(--line);border-radius:16px;background:var(--bg);padding:18px 20px}
+.th-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.th-row:last-child{border-bottom:none;padding-bottom:2px}
+.th-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.th-title{font-size:13.5px;font-weight:600;letter-spacing:-.01em}
+.th-chip{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:3px 7px;border-radius:5px;border:1px solid var(--line);color:var(--fg-mute);white-space:nowrap}
+.th-chip.b-strong{color:var(--positive);border-color:rgba(74,135,98,.4)}
+.th-chip.b-tilt{color:var(--amber);border-color:rgba(176,122,46,.4)}
+.th-chip.b-lean{color:var(--fg-dim)}
+.th-chip.scout{color:#3F8E9B;border-color:rgba(63,142,155,.4)}
+.th-meta{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--fg-mute);margin-top:4px;display:flex;gap:14px;flex-wrap:wrap}
+.th-meta .up{color:var(--positive)}.th-meta .dn{color:var(--danger)}
+.th-detail{display:none;margin-top:10px}
+.th-detail.show{display:flex;flex-direction:column;gap:6px;animation:rise .2s var(--ease)}
+.th-pill{display:flex;align-items:flex-start;gap:8px;background:var(--bg-3);border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:12px;color:var(--fg-dim);line-height:1.5}
+.th-pill .pp-lab{font-size:9px;font-family:'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-mute);white-space:nowrap;margin-top:2px;flex:none;min-width:64px}
+.th-ev{display:flex;gap:8px;align-items:baseline;font-size:12px;color:var(--fg-dim);line-height:1.45;padding:3px 0}
+.th-ev .dot{width:7px;height:7px;border-radius:99px;flex:none;position:relative;top:0}
+.th-ev .dot.supporting{background:var(--positive)}.th-ev .dot.contradicting{background:var(--danger)}
+.th-ev .d{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--fg-mute);white-space:nowrap}
 .hcm-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:16px}
 @media(max-width:960px){.hcm-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:640px){.hcm-grid{grid-template-columns:1fr}}
@@ -563,6 +586,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     </div>
   </div>
   <div class="hcm-band" id="hcmBand"></div>
+  <div class="th-band" id="thesisBand"></div>
   <div class="wrapC">
     <div class="regimeBand"><span class="lab">Regime read</span><div class="t" id="regimeT"></div><div class="regime-timeline" id="regimeTimeline"><button class="rh-toggle" id="rhToggle">▸ Updates</button><div class="regime-timeline-body" id="rhBody"></div></div></div>
     <div class="sector-widget" id="sectorWidget"><div class="sw-header"><div class="sw-lab">Sector rotation</div><div class="sw-read" id="sectorRead"></div></div><div class="sector-rows" id="sectorRows"></div></div>
@@ -943,6 +967,52 @@ function renderHCM() {
   });
 }
 
+/* ---------- thesis desk (structural ideas — from B.theses) ---------- */
+function renderTheses() {
+  var band = $('thesisBand'); if (!band) return;
+  var list = Array.isArray(B.theses) ? B.theses.filter(function(t) { return t.status === 'open'; }) : [];
+  if (!list.length) { band.style.display = 'none'; return; }
+
+  var bandChip = (b) => '<span class="th-chip b-' + escc(b) + '">' + escc(b) + '</span>';
+  var rows = list.map(function(t, i) {
+    var p = t.performance;
+    var perf = p && p.excessPct != null ?
+      '<span>basket <span class="' + cls(p.basketPct) + '">' + pct(p.basketPct) + '</span> · <span class="' + (p.excessPct >= 0 ? 'up' : 'dn') + '">' + pct(p.excessPct) + ' vs SPY</span></span>' :
+      '<span>tracking from ' + escc(t.openedAt || '—') + '</span>';
+    var ev = (t.evidence || []).map(function(e) {
+      return '<div class="th-ev"><span class="dot ' + escc(e.class) + '"></span><span class="d">' + escc(e.date) + ' ' + escc(e.ticker) + '</span><span>' + escc(e.headline) + (e.note ? ' — <i>' + escc(e.note) + '</i>' : '') + '</span></div>';
+    }).join('');
+    var pills = [
+      t.chain && t.chain.length ? ['Chain', t.chain.join(' → ')] : null,
+      t.rationale ? ['Read', t.rationale] : null,
+      t.bull ? ['Bull', t.bull] : null, t.base ? ['Base', t.base] : null, t.bear ? ['Bear', t.bear] : null,
+      t.milestones && t.milestones.length ? ['Milestones', t.milestones.join(' · ')] : null,
+      t.watchNext ? ['Watch', t.watchNext] : null,
+    ].filter(Boolean).map(function(x) { return '<div class="th-pill"><span class="pp-lab">' + x[0] + '</span><span>' + escc(x[1]) + '</span></div>'; }).join('');
+    return '<div class="th-row">' +
+      '<div class="th-top"><span class="th-title">' + escc(t.title) + '</span>' + bandChip(t.band) +
+      (t.origin === 'scout' ? '<span class="th-chip scout">scout</span>' : '') +
+      '<button class="hcm-info" data-th="' + i + '">▸ Details</button></div>' +
+      '<div class="th-meta"><span>' + (t.basket || []).map(escc).join(' · ') + '</span>' + perf +
+      '<span>' + (t.evidence || []).length + ' evidence item' + ((t.evidence || []).length === 1 ? '' : 's') + '</span></div>' +
+      '<div class="th-detail">' + pills + (ev ? '<div style="margin-top:2px">' + ev + '</div>' : '') + '</div>' +
+      '</div>';
+  }).join('');
+
+  band.innerHTML = '<div class="th-card">' +
+    '<div class="hcm-hd"><span class="hcm-t">Thesis desk</span><span class="hcm-count">' + list.length + ' open</span></div>' +
+    rows + '</div>';
+
+  band.querySelectorAll('.hcm-info').forEach(function(btn) {
+    btn.onclick = function() {
+      var detail = this.closest('.th-row').querySelector('.th-detail');
+      var on = detail.classList.toggle('show');
+      this.classList.toggle('on', on);
+      this.textContent = on ? '▾ Details' : '▸ Details';
+    };
+  });
+}
+
 let heroDetailOpen = false;
 function toggleHeroDetail(btn) {
   const hero = btn.closest('.hero');
@@ -1054,6 +1124,7 @@ function heroCard(m, rank) {
 function initBoard() {
   if (boardInit) return; boardInit = true;
   renderHCM();
+  renderTheses();
   const MOV = B.movers;
   // header / regime / index
   $('regimeT').textContent = B.regime;
