@@ -5,6 +5,7 @@
 <style>
 :root{--bg:#FAF9F5;--bg-2:#F4F1EA;--bg-3:#EBE7DC;--fg:#1F1E1B;--fg-dim:rgba(31,30,27,.66);--fg-mute:rgba(31,30,27,.42);--line:rgba(31,30,27,.08);--line-2:rgba(31,30,27,.18);--accent:#E5E9E0;--amber:#B07A2E;--positive:#4A8762;--danger:#A8442C;--r:14px;--ease:cubic-bezier(.4,0,.2,1);--spring:cubic-bezier(.34,1.56,.64,1)}
 *{box-sizing:border-box;margin:0;padding:0}
+html,body{overflow-x:hidden;overscroll-behavior-x:none}
 body{background:var(--bg);color:var(--fg);font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .mono{font-family:'IBM Plex Mono',monospace}
 .lab{font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:11.5px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--fg-dim)}
@@ -244,11 +245,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-rec{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--fg-mute);letter-spacing:.03em;margin:-6px 0 10px}
 .hcm-rec .up{color:var(--positive)}.hcm-rec .dn{color:var(--danger)}
 /* ===== thesis desk (structural ideas) ===== */
-.th-band{max-width:1180px;margin:0 auto;padding:0 28px 18px}
-@media(max-width:640px){.th-band{padding:0 16px 14px}}
 .th-card{border:1px solid var(--line);border-radius:16px;background:var(--bg);padding:18px 20px}
-.th-row{padding:12px 0;border-bottom:1px solid var(--line)}
-.th-row:last-child{border-bottom:none;padding-bottom:2px}
 .th-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .th-title{font-size:13.5px;font-weight:600;letter-spacing:-.01em}
 .th-chip{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:3px 7px;border-radius:5px;border:1px solid var(--line);color:var(--fg-mute);white-space:nowrap}
@@ -433,11 +430,26 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 /* ===== hgrid 3-col on wide screens ===== */
 @media(min-width:640px){.hgrid{grid-template-columns:1fr 1fr!important}}
 
+/* ===== thesis scout — its own page in the book → report → thesis → firm chain ===== */
+#thesis{position:fixed;inset:0;z-index:61;background:var(--bg);overflow:hidden;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .38s cubic-bezier(.4,0,.2,1)}
+#thesis.shown{transform:none}
+#thesis.shown ~ #chatDock{display:none}
+.th-wrap{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:6px 24px 130px;max-width:920px;width:100%;margin:0 auto;scrollbar-width:none}
+.th-wrap::-webkit-scrollbar{width:0;display:none}
+.th-head{margin:6px 0 14px}
+.th-head h1{font-size:20px;font-weight:500;letter-spacing:-.02em}
+.th-sub{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.04em;color:var(--fg-mute);margin-top:5px}
+#thesisList{display:flex;flex-direction:column;gap:14px}
+#thComposeDock{position:absolute;right:22px;bottom:22px;z-index:5}
+#thComposeDock.open .chat-panel{display:flex}
+#thComposeDock.open .chat-fab{display:none}
+@media(max-width:640px){.th-wrap{padding:6px 16px 120px}#thComposeDock{right:14px;bottom:14px}}
+
 /* ===== the firm — org chart ===== */
-#org{position:fixed;inset:0;z-index:61;background:var(--bg);overflow:hidden;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .38s cubic-bezier(.4,0,.2,1)}
+#org{position:fixed;inset:0;z-index:62;background:var(--bg);overflow:hidden;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .38s cubic-bezier(.4,0,.2,1)}
 #org.shown{transform:none}
 #org.shown ~ #chatDock{display:none}
-.org-wrap{flex:1;min-height:0;display:flex;flex-direction:column;padding:6px 24px 28px;max-width:1280px;width:100%;margin:0 auto;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none}
+.org-wrap{flex:1;min-height:0;display:flex;flex-direction:column;padding:6px 24px 28px;max-width:1280px;width:100%;margin:0 auto;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;-ms-overflow-style:none}
 .org-wrap::-webkit-scrollbar{width:0;height:0;display:none}
 .org-head{margin:6px 0 12px}
 .org-head h1{font-size:20px;font-weight:500;letter-spacing:-.02em}
@@ -547,6 +559,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <span class="nav-sep">→</span>
       <button class="page-step" id="goToBoardBtn" onclick="swipeToBoard()">Market report</button>
       <span class="nav-sep">→</span>
+      <button class="page-step" onclick="openThesis()">Thesis scout</button>
+      <span class="nav-sep">→</span>
       <button class="page-step" onclick="goToOrg()">The firm</button>
     </div>
     <div class="hm-top">
@@ -573,6 +587,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     <span class="nav-sep">→</span>
     <button class="page-step on">Market report</button>
     <span class="nav-sep">→</span>
+    <button class="page-step" onclick="openThesis()">Thesis scout</button>
+    <span class="nav-sep">→</span>
     <button class="page-step" onclick="goToOrg()">The firm</button>
   </div>
   <div class="cHead">
@@ -586,7 +602,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     </div>
   </div>
   <div class="hcm-band" id="hcmBand"></div>
-  <div class="th-band" id="thesisBand"></div>
   <div class="wrapC">
     <div class="regimeBand"><span class="lab">Regime read</span><div class="t" id="regimeT"></div><div class="regime-timeline" id="regimeTimeline"><button class="rh-toggle" id="rhToggle">▸ Updates</button><div class="regime-timeline-body" id="rhBody"></div></div></div>
     <div class="sector-widget" id="sectorWidget"><div class="sw-header"><div class="sw-lab">Sector rotation</div><div class="sw-read" id="sectorRead"></div></div><div class="sector-rows" id="sectorRows"></div></div>
@@ -627,6 +642,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <span class="nav-sep">→</span>
       <button class="page-step" onclick="closeOrgToBoard()">Market report</button>
       <span class="nav-sep">→</span>
+      <button class="page-step" onclick="closeOrgToThesis()">Thesis scout</button>
+      <span class="nav-sep">→</span>
       <button class="page-step on">The firm</button>
     </div>
     <div class="org-head">
@@ -648,6 +665,41 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   </div>
   <div class="bscrim" id="orgScrim"></div>
   <div class="org-detail" id="orgDetail"></div>
+</div>
+
+<!-- ===== thesis scout ===== -->
+<div id="thesis">
+  <div class="th-wrap">
+    <div class="brandbar">
+      <div class="brand"><span class="seal">JW</span><span class="wm">JW Private Wealth</span></div>
+      <div class="when"><span id="thClock">--:--:-- ET</span><div class="d" id="thDt"></div></div>
+    </div>
+    <div class="page-nav" id="thesisNav">
+      <button class="page-step" onclick="closeThesisToBrief()">Your book</button>
+      <span class="nav-sep">→</span>
+      <button class="page-step" onclick="closeThesisToBoard()">Market report</button>
+      <span class="nav-sep">→</span>
+      <button class="page-step on">Thesis scout</button>
+      <span class="nav-sep">→</span>
+      <button class="page-step" onclick="goToOrg()">The firm</button>
+    </div>
+    <div class="th-head">
+      <h1>Thesis scout.</h1>
+      <div class="th-sub" id="thesisSub">structural ideas — researched, graded, and tracked against the market until they resolve</div>
+    </div>
+    <div id="thesisList"></div>
+  </div>
+  <div id="thComposeDock">
+    <button class="chat-fab" id="thComposeOpen"><span class="fab-spk">✦</span> Add a new thesis</button>
+    <div class="chat-panel">
+      <div class="chat-head">
+        <div class="ttl"><span class="chip">JW</span><div><div class="nm">Add a new thesis</div><div class="sub">Thesis desk — intake</div></div></div>
+        <button class="chat-close" id="thComposeClose">✕</button>
+      </div>
+      <div class="chat-log" id="thComposeLog"></div>
+      <div class="chat-input"><textarea id="thComposeTa" rows="3" placeholder="Paste an article's text (or your own idea)…"></textarea><button class="chat-send" id="thComposeSend">↑</button></div>
+    </div>
+  </div>
 </div>
 
 <!-- ===== Ask the desk ===== -->
@@ -699,6 +751,8 @@ function briefClock() {
   if ($('dt')) $('dt').textContent = ds;
   if ($('oClock')) $('oClock').textContent = ts;
   if ($('oDt')) $('oDt').textContent = ds;
+  if ($('thClock')) $('thClock').textContent = ts;
+  if ($('thDt')) $('thDt').textContent = ds;
 }
 function renderBriefing() {
   if (!B.portfolio) { enterBoard(true); return; }
@@ -781,8 +835,10 @@ function enterBoard(skip) {
   document.addEventListener('touchstart', function(e) {
     if (!$('brief').classList.contains('gone')) return;
     if ($('org').classList.contains('shown')) return;
+    if ($('thesis').classList.contains('shown')) return;
     if (e.target.closest('#hcmBuyCard')) return;
     if (e.target.closest('#hero')) return;
+    if (e.target.closest('#chatDock')) return;
     tx = e.touches[0].clientX; ty = e.touches[0].clientY; swiping = false;
   }, { passive: true });
   document.addEventListener('touchmove', function(e) {
@@ -794,6 +850,7 @@ function enterBoard(skip) {
     if (!swiping || tx === null) { tx = null; swiping = false; return; }
     var dx = e.changedTouches[0].clientX - tx; tx = null; swiping = false;
     if (dx > 50) goToBrief();
+    else if (dx < -50) openThesis();   // board → thesis scout (the missing left-swipe)
   });
 }());
 
@@ -967,11 +1024,19 @@ function renderHCM() {
   });
 }
 
-/* ---------- thesis desk (structural ideas — from B.theses) ---------- */
+/* ---------- thesis scout page (structural ideas — from B.theses) ---------- */
+var thesisRendered = false;
 function renderTheses() {
-  var band = $('thesisBand'); if (!band) return;
+  var host = $('thesisList'); if (!host || thesisRendered) return;
+  thesisRendered = true;
   var list = Array.isArray(B.theses) ? B.theses.filter(function(t) { return t.status === 'open'; }) : [];
-  if (!list.length) { band.style.display = 'none'; return; }
+  $('thesisSub').textContent = list.length
+    ? list.length + ' open thesis' + (list.length === 1 ? '' : 'es') + ' · updated with each morning publish'
+    : 'structural ideas — researched, graded, and tracked against the market until they resolve';
+  if (!list.length) {
+    host.innerHTML = '<div class="th-card"><div class="hcm-none">No theses on file yet. Tap “Add a new thesis” below — paste an article or write the idea, and the desk researches, grades, and tracks it here.</div></div>';
+    return;
+  }
 
   var bandChip = (b) => '<span class="th-chip b-' + escc(b) + '">' + escc(b) + '</span>';
   var rows = list.map(function(t, i) {
@@ -989,21 +1054,21 @@ function renderTheses() {
       t.milestones && t.milestones.length ? ['Milestones', t.milestones.join(' · ')] : null,
       t.watchNext ? ['Watch', t.watchNext] : null,
     ].filter(Boolean).map(function(x) { return '<div class="th-pill"><span class="pp-lab">' + x[0] + '</span><span>' + escc(x[1]) + '</span></div>'; }).join('');
-    return '<div class="th-row">' +
+    return '<div class="th-card">' +
       '<div class="th-top"><span class="th-title">' + escc(t.title) + '</span>' + bandChip(t.band) +
       (t.origin === 'scout' ? '<span class="th-chip scout">scout</span>' : '') +
       '<button class="hcm-info" data-th="' + i + '">▸ Details</button></div>' +
+      (t.theme ? '<div class="th-meta" style="margin-top:2px"><span>theme — ' + escc(t.theme) + '</span></div>' : '') +
       '<div class="th-meta"><span>' + (t.basket || []).map(escc).join(' · ') + '</span>' + perf +
       '<span>' + (t.evidence || []).length + ' evidence item' + ((t.evidence || []).length === 1 ? '' : 's') + '</span></div>' +
       '<div class="th-detail">' + pills + (ev ? '<div style="margin-top:2px">' + ev + '</div>' : '') + '</div>' +
       '</div>';
   }).join('');
 
-  band.innerHTML = '<div class="th-card">' +
-    '<div class="hcm-hd"><span class="hcm-t">Thesis desk</span><span class="hcm-count">' + list.length + ' open</span></div>' +
-    rows + '</div>';
+  var host2 = $('thesisList');
+  host2.innerHTML = rows;
 
-  band.querySelectorAll('.hcm-info').forEach(function(btn) {
+  host2.querySelectorAll('.hcm-info').forEach(function(btn) {
     btn.onclick = function() {
       var detail = this.closest('.th-row').querySelector('.th-detail');
       var on = detail.classList.toggle('show');
@@ -1124,8 +1189,9 @@ function heroCard(m, rank) {
 function initBoard() {
   if (boardInit) return; boardInit = true;
   renderHCM();
-  renderTheses();
-  const MOV = B.movers;
+  // Rank is relevance (publish pre-sorts); past ~12 the list is noise the desk already
+  // dismissed — cap what the board and the in-focus carousel show.
+  const MOV = B.movers.slice(0, 12);
   // header / regime / index
   $('regimeT').textContent = B.regime;
   $('moverCount').textContent = MOV.length;
@@ -1499,14 +1565,70 @@ function goToOrg(){
   $('org').classList.add('shown');
   sessionStorage.setItem('jwPage', 'org');
 }
-function closeOrgToBoard(){ $('org').classList.remove('shown'); orgDetailClose(); sessionStorage.setItem('jwPage', 'board'); }
-function closeOrgToBrief(){ $('org').classList.remove('shown'); orgDetailClose(); $('brief').classList.remove('gone'); window.scrollTo(0, 0); sessionStorage.setItem('jwPage', 'brief'); }
+function closeOrgToBoard(){ $('org').classList.remove('shown'); $('thesis').classList.remove('shown'); orgDetailClose(); sessionStorage.setItem('jwPage', 'board'); }
+function closeOrgToBrief(){ $('org').classList.remove('shown'); $('thesis').classList.remove('shown'); orgDetailClose(); $('brief').classList.remove('gone'); window.scrollTo(0, 0); sessionStorage.setItem('jwPage', 'brief'); }
+function closeOrgToThesis(){ $('org').classList.remove('shown'); orgDetailClose(); openThesis(); }
 $('orgScrim').addEventListener('click', orgDetailClose);
 (function(){
   var tx = null, ty = null, sw = false, el = $('org');
   el.addEventListener('touchstart', function(e){ if ($('orgDetail').classList.contains('on')) return; tx = e.touches[0].clientX; ty = e.touches[0].clientY; sw = false; }, { passive: true });
   el.addEventListener('touchmove', function(e){ if (tx === null) return; var dx = e.touches[0].clientX - tx, dy = e.touches[0].clientY - ty; if (!sw && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) sw = true; }, { passive: true });
-  el.addEventListener('touchend', function(e){ if (!sw || tx === null) { tx = null; sw = false; return; } var dx = e.changedTouches[0].clientX - tx; tx = null; sw = false; if (dx > 50) closeOrgToBoard(); });
+  el.addEventListener('touchend', function(e){ if (!sw || tx === null) { tx = null; sw = false; return; } var dx = e.changedTouches[0].clientX - tx; tx = null; sw = false; if (dx > 50) closeOrgToThesis(); });
+}());
+
+/* ---------- thesis scout page navigation + composer ---------- */
+function openThesis(){
+  $('brief').classList.add('gone');
+  if (!boardInitialized) { boardInitialized = true; initBoard(); }
+  renderTheses();
+  $('org').classList.remove('shown');
+  $('thesis').classList.add('shown');
+  sessionStorage.setItem('jwPage', 'thesis');
+}
+function closeThesisToBoard(){ $('thesis').classList.remove('shown'); sessionStorage.setItem('jwPage', 'board'); }
+function closeThesisToBrief(){ $('thesis').classList.remove('shown'); $('brief').classList.remove('gone'); window.scrollTo(0, 0); sessionStorage.setItem('jwPage', 'brief'); }
+// swipe: right → back to the report, left → on to the firm
+(function(){
+  var tx = null, ty = null, sw = false, el = $('thesis');
+  el.addEventListener('touchstart', function(e){
+    if (e.target.closest('#thComposeDock')) return;
+    tx = e.touches[0].clientX; ty = e.touches[0].clientY; sw = false;
+  }, { passive: true });
+  el.addEventListener('touchmove', function(e){ if (tx === null) return; var dx = e.touches[0].clientX - tx, dy = e.touches[0].clientY - ty; if (!sw && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) sw = true; }, { passive: true });
+  el.addEventListener('touchend', function(e){
+    if (!sw || tx === null) { tx = null; sw = false; return; }
+    var dx = e.changedTouches[0].clientX - tx; tx = null; sw = false;
+    if (dx > 50) closeThesisToBoard();
+    else if (dx < -50) goToOrg();
+  });
+}());
+// "Add a new thesis" composer — files into the same GitHub-issue intake the desk grades.
+(function(){
+  var dock = $('thComposeDock'), log = $('thComposeLog'), ta = $('thComposeTa');
+  if (!dock) return;
+  var addMsg = function(cls, html){ var d = document.createElement('div'); d.className = 'msg ' + cls; d.innerHTML = html; log.appendChild(d); log.scrollTop = log.scrollHeight; };
+  var greeted = false;
+  $('thComposeOpen').onclick = function(){
+    dock.classList.add('open');
+    if (!greeted) { greeted = true; addMsg('bot', 'Paste an article’s <b>text</b> (or write the idea in your own words) and send. I’ll file it to the thesis desk — it extracts the chain, researches the tickers, and grades it within minutes. The verdict posts to the GitHub thread immediately and appears on this page with the next morning publish.'); }
+    setTimeout(function(){ ta.focus(); }, 60);
+  };
+  $('thComposeClose').onclick = function(){ dock.classList.remove('open'); };
+  $('thComposeSend').onclick = function(){
+    var t = ta.value.trim();
+    if (!t) return;
+    ta.value = '';
+    addMsg('user', escc(t.length > 280 ? t.slice(0, 280) + '…' : t));
+    var urlOnly = /^https?:\S+$/.test(t);
+    var firstLine = t.split('\n')[0].replace(/\s+/g, ' ').slice(0, 60);
+    var title = 'Thesis: ' + (urlOnly ? 'from link — ' + new Date().toISOString().slice(0, 10) : firstLine + (t.length > 60 ? '…' : ''));
+    var body = t.slice(0, 5500) + (t.length > 5500 ? '\n\n[truncated on paste — original was longer]' : '');
+    var issueUrl = 'https://github.com/JWincltd/jw-brief/issues/new?labels=thesis&title=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(body);
+    window.open(issueUrl, '_blank');
+    addMsg('bot', 'Filed — a GitHub tab opened with your thesis pre-filled. Tap <b>Submit new issue</b> there to hand it to the desk.' +
+      (urlOnly ? '<br><br><b>Heads up:</b> that looks like a link only — the desk can’t fetch pages yet, so paste the article text itself for a proper grade.' : ''));
+  };
+  ta.addEventListener('keydown', function(e){ if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('thComposeSend').click(); });
 }());
 
 chatInit();
@@ -1531,6 +1653,11 @@ else if (_jwPage === 'org') {
   if (!orgInitialized) renderOrg();
   var _o = $('org'); _o.style.transition = 'none'; _o.classList.add('shown'); _o.offsetHeight; _o.style.transition = '';
 }
+else if (_jwPage === 'thesis') {
+  enterBoard(true);
+  renderTheses();
+  var _t = $('thesis'); _t.style.transition = 'none'; _t.classList.add('shown'); _t.offsetHeight; _t.style.transition = '';
+}
 // Measure the actual briefNav Y position and set boardNav padding to match exactly.
 // CSS approximations vary by device/font-rendering; JS measurement is always pixel-perfect.
 function syncNavY() {
@@ -1542,6 +1669,14 @@ function syncNavY() {
   boardNav.style.paddingTop = Math.max(0, pad) + 'px';
 }
 requestAnimationFrame(syncNavY);
-window.addEventListener('resize', syncNavY);
+// Only re-measure on real width changes: mobile browsers fire resize when the URL bar
+// collapses/expands during scrolls and swipes, and re-padding the nav mid-gesture made
+// the page visibly jump ("tries to resize").
+var _navW = window.innerWidth;
+window.addEventListener('resize', function() {
+  if (window.innerWidth === _navW) return;
+  _navW = window.innerWidth;
+  syncNavY();
+});
 </script>
 </body></html>
