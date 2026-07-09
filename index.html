@@ -241,6 +241,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-empty .hcm-t,.hcm-empty .hcm-count{color:var(--fg-mute)}
 .hcm-empty .hcm-hd::after{background:var(--line-2)}
 .hcm-none{flex:1;display:flex;align-items:center;min-height:56px;font-size:12px;color:var(--fg-mute);line-height:1.55}
+.hcm-rec{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--fg-mute);letter-spacing:.03em;margin:-6px 0 10px}
+.hcm-rec .up{color:var(--positive)}.hcm-rec .dn{color:var(--danger)}
 .hcm-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:16px}
 @media(max-width:960px){.hcm-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:640px){.hcm-grid{grid-template-columns:1fr}}
@@ -822,14 +824,27 @@ function renderHCM() {
     '<span class="hcm-count nav" id="hcmCount" title="Next pick">1 / ' + buys.length + '</span>' : '';
   const emptyNote = (msg) => '<div class="hcm-none">' + escc(msg) + '</div>';
 
+  // Measured desk record per card type (simulated P&L from the jw-brief play ledger).
+  // Absent on older payloads — cards simply omit the line.
+  const rec = hcm.record || {};
+  const recLine = (t) => {
+    const r = rec[t]; if (!r) return '';
+    if (!r.graded) return r.open ? '<div class="hcm-rec">Record — ' + r.open + ' play' + (r.open === 1 ? '' : 's') + ' open, none graded yet</div>' : '';
+    const rr = '<span class="' + (r.totalR >= 0 ? 'up' : 'dn') + '">' + (r.totalR >= 0 ? '+' : '') + (+r.totalR).toFixed(1) + 'R</span>';
+    if (r.calibrating) return '<div class="hcm-rec">Record — calibrating · ' + r.wins + 'W / ' + r.losses + 'L · ' + rr + ' (' + r.graded + ' graded)</div>';
+    return '<div class="hcm-rec">Record — ' + Math.round(r.hitRate * 100) + '% · ' + rr + ' over ' + r.graded + ' plays</div>';
+  };
+
   const buyHTML = buys.length ?
     '<div class="hcm-card hcm-buy hcm-r1" id="hcmBuyCard">' +
     (buys.length > 1 ? '<div class="hcm-pip-row" id="hcmPips">' + buys.map((_, i) => '<span class="hero-pip' + (i === 0 ? ' active' : '') + '" data-i="' + i + '"></span>').join('') + '</div>' : '') +
     '<div class="hcm-hd"><span class="hcm-t" id="hcmBuyLab">Highest conviction</span>' + countHTML + '</div>' +
+    recLine('buy') +
     '<div class="hcm-buy-vp" id="hcmBuySlides">' + buildBuySlide(buys[0]) + '</div>' +
     '</div>' :
     '<div class="hcm-card hcm-buy hcm-empty" id="hcmBuyCard">' +
     '<div class="hcm-hd"><span class="hcm-t" id="hcmBuyLab">Highest conviction</span><span class="hcm-count">0 picks</span></div>' +
+    recLine('buy') +
     emptyNote(hcm.note || 'No conviction picks this morning — nothing cleared the desk.') +
     '</div>';
   const playHTML = (p) => '<div class="hcm-play">' +
@@ -841,9 +856,11 @@ function renderHCM() {
   const bo = hcm.breakout || [], bd = hcm.breakdown || [];
   const boHTML = '<div class="hcm-card hcm-bo' + (bo.length ? '' : ' hcm-empty') + '">' +
     '<div class="hcm-hd"><span class="hcm-t">Breakout plays</span><span class="hcm-count">' + bo.length + (bo.length === 1 ? ' watch' : ' watches') + '</span></div>' +
+    recLine('breakout') +
     (bo.length ? bo.map(playHTML).join('') : emptyNote('No breakout setups this morning — nothing cleared the desk.')) + '</div>';
   const bdHTML = '<div class="hcm-card hcm-bd' + (bd.length ? '' : ' hcm-empty') + '">' +
     '<div class="hcm-hd"><span class="hcm-t">Breakdown plays</span><span class="hcm-count">' + bd.length + (bd.length === 1 ? ' watch' : ' watches') + '</span></div>' +
+    recLine('breakdown') +
     (bd.length ? bd.map(playHTML).join('') : emptyNote('No breakdown setups this morning — nothing cleared the desk.')) + '</div>';
   $('hcmBand').innerHTML = '<div class="hcm-grid">' + buyHTML + boHTML + bdHTML + '</div>';
 
