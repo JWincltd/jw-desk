@@ -1682,8 +1682,10 @@ function closeThesisToBrief(){ $('thesis').classList.remove('shown'); $('brief')
       headers: { 'Authorization': 'Bearer ' + localStorage.getItem('jwGhToken'), 'Accept': 'application/vnd.github+json' },
     }, opts || {}));
   };
+  var PENDING = 'jwPendingThesis';
   var needToken = function(){
-    addMsg('note', 'One-time setup: paste a GitHub token here so I can file theses for you (it stays on this device only).<br><br>' +
+    addMsg('note', 'This browser needs its one-time setup: paste a GitHub token here so I can file theses for you. It stays in this browser only — note that Safari and a Home-Screen app each keep their own copy, so a place you haven’t set up yet will ask once.' +
+      (localStorage.getItem(PENDING) ? '<br><br><b>Your thesis is saved</b> — it files automatically the moment the token is in.' : '') + '<br><br>' +
       '<b>github.com → Settings → Developer settings → Fine-grained tokens → Generate</b>: Resource owner <b>JWincltd</b>, repository <b>jw-brief</b> only, permission <b>Issues: read &amp; write</b>. Paste the token (starts with <code>github_pat_</code>) into the box below and send.');
   };
   var looksLikeToken = function(t){ return /^(github_pat_|ghp_)[A-Za-z0-9_]{20,}$/.test(t); };
@@ -1715,6 +1717,33 @@ function closeThesisToBrief(){ $('thesis').classList.remove('shown'); $('brief')
     setTimeout(function(){ ta.focus(); }, 60);
   };
   $('thComposeClose').onclick = function(){ dock.classList.remove('open'); };
+  function fileThesis(t){
+    var urlOnly = /^https?:\S+$/.test(t);
+    var firstLine = t.split('\n')[0].replace(/\s+/g, ' ').slice(0, 60);
+    var title = 'Thesis: ' + (urlOnly ? 'from link — ' + new Date().toISOString().slice(0, 10) : firstLine + (t.length > 60 ? '…' : ''));
+    var working = addMsg('bot', 'Filing…');
+    api('repos/' + REPO + '/issues', {
+      method: 'POST',
+      body: JSON.stringify({ title: title, body: t, labels: ['thesis'] }),
+    }).then(function(r){
+      if (r.status === 401 || r.status === 403 || r.status === 404) {
+        localStorage.removeItem('jwGhToken');
+        localStorage.setItem(PENDING, t);           // keep the thesis — it refiles after re-setup
+        working.className = 'msg note';
+        working.innerHTML = 'GitHub refused the filing (HTTP ' + r.status + ') — the saved token can’t <b>create</b> issues on ' + REPO + ', so I’ve cleared it. Your thesis is saved and will file automatically once a working token is in. Generate a fresh fine-grained token (resource owner <b>JWincltd</b>, repository <b>jw-brief</b>, permission <b>Issues: read &amp; write</b>) and paste it here.';
+        return null;
+      }
+      if (!r.ok) { working.innerHTML = 'Filing failed (HTTP ' + r.status + ') — try again in a moment.'; working.className = 'msg note'; return null; }
+      return r.json();
+    }).then(function(issue){
+      if (!issue) return;
+      localStorage.removeItem(PENDING);
+      working.innerHTML = 'Filed as <b>#' + issue.number + '</b> ✓ — the desk is researching and grading it now (usually 2–5 minutes). I’ll post the verdict here as soon as it lands.' +
+        (urlOnly ? '<br><br>Link detected — the desk will fetch and read the page. Public articles work best; if it’s paywalled the grade may come back thin, in which case paste the text itself.' : '');
+      pollVerdict(issue.number, working);
+    }).catch(function(){ working.innerHTML = 'Couldn’t reach GitHub — check the connection and try again.'; working.className = 'msg note'; });
+  }
+
   $('thComposeSend').onclick = function(){
     var t = ta.value.trim();
     if (!t) return;
@@ -1727,8 +1756,11 @@ function closeThesisToBrief(){ $('thesis').classList.remove('shown'); $('brief')
       // scoped to the wrong repo or missing Issues RW passed the old check and then failed
       // silently at filing time.
       api('repos/' + REPO + '/issues?per_page=1&state=all').then(function(r){
-        if (r.ok) addMsg('bot', 'Token verified ✓ — it can read and file issues on ' + REPO + '. Saved on this device; paste a thesis whenever you’re ready.');
-        else {
+        if (r.ok) {
+          var pending = localStorage.getItem(PENDING);
+          addMsg('bot', 'Token verified ✓ — it can read and file issues on ' + REPO + '. Saved in this browser.' + (pending ? ' Filing your saved thesis now…' : ' Paste a thesis whenever you’re ready.'));
+          if (pending) fileThesis(pending);
+        } else {
           localStorage.removeItem('jwGhToken');
           addMsg('note', 'That token can’t work with issues on <b>' + REPO + '</b> (HTTP ' + r.status + '). When generating it, make sure of all three: resource owner <b>JWincltd</b> · repository access <b>jw-brief</b> · repository permission <b>Issues: read &amp; write</b>. Then paste the new token here.');
         }
@@ -1737,30 +1769,12 @@ function closeThesisToBrief(){ $('thesis').classList.remove('shown'); $('brief')
     }
 
     addMsg('user', escc(t.length > 280 ? t.slice(0, 280) + '…' : t));
-    if (!localStorage.getItem('jwGhToken')) { needToken(); return; }
-
-    var urlOnly = /^https?:\S+$/.test(t);
-    var firstLine = t.split('\n')[0].replace(/\s+/g, ' ').slice(0, 60);
-    var title = 'Thesis: ' + (urlOnly ? 'from link — ' + new Date().toISOString().slice(0, 10) : firstLine + (t.length > 60 ? '…' : ''));
-    var working = addMsg('bot', 'Filing…');
-    api('repos/' + REPO + '/issues', {
-      method: 'POST',
-      body: JSON.stringify({ title: title, body: t, labels: ['thesis'] }),
-    }).then(function(r){
-      if (r.status === 401 || r.status === 403 || r.status === 404) {
-        localStorage.removeItem('jwGhToken');
-        working.className = 'msg note';
-        working.innerHTML = 'GitHub refused the filing (HTTP ' + r.status + ') — the saved token can’t <b>create</b> issues on ' + REPO + ', so I’ve cleared it. Generate a fresh fine-grained token with resource owner <b>JWincltd</b>, repository <b>jw-brief</b>, permission <b>Issues: read &amp; write</b>, paste it here, and then resend your thesis.';
-        return null;
-      }
-      if (!r.ok) { working.innerHTML = 'Filing failed (HTTP ' + r.status + ') — try again in a moment.'; working.className = 'msg note'; return null; }
-      return r.json();
-    }).then(function(issue){
-      if (!issue) return;
-      working.innerHTML = 'Filed as <b>#' + issue.number + '</b> ✓ — the desk is researching and grading it now (usually 2–5 minutes). I’ll post the verdict here as soon as it lands.' +
-        (urlOnly ? '<br><br>Link detected — the desk will fetch and read the page. Public articles work best; if it’s paywalled the grade may come back thin, in which case paste the text itself.' : '');
-      pollVerdict(issue.number, working);
-    }).catch(function(){ working.innerHTML = 'Couldn’t reach GitHub — check the connection and try again.'; working.className = 'msg note'; });
+    if (!localStorage.getItem('jwGhToken')) {
+      localStorage.setItem(PENDING, t);             // don't lose the paste — file it post-setup
+      needToken();
+      return;
+    }
+    fileThesis(t);
   };
   ta.addEventListener('keydown', function(e){ if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('thComposeSend').click(); });
 }());
