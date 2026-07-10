@@ -361,7 +361,13 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .sugg{font-family:'IBM Plex Mono',monospace;font-size:11px;border:1px solid var(--line);border-radius:999px;padding:7px 11px;color:var(--fg-dim);background:var(--bg);text-align:left;transition:all .15s}
 .sugg:hover{border-color:var(--line-2);background:var(--bg-2);color:var(--fg)}
 .chat-input{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line);align-items:flex-end}
-.chat-input textarea{flex:1;resize:none;border:1px solid var(--line-2);border-radius:11px;padding:10px 12px;font-family:inherit;font-size:13.5px;background:var(--bg);max-height:96px;color:var(--fg)}
+.chat-input textarea{flex:1;resize:none;border:1px solid var(--line-2);border-radius:11px;padding:10px 12px;font-family:inherit;font-size:13.5px;background:var(--bg);max-height:96px;color:var(--fg);min-width:0}
+/* iOS auto-zooms any focused input under 16px — keep inputs at 16px on phones, and size
+   the panel with dvh so the on-screen keyboard can't push the send arrow off-screen */
+@media(max-width:640px){
+  .chat-input textarea{font-size:16px}
+  .chat-panel{height:min(520px,72dvh);max-width:calc(100vw - 28px)}
+}
 .chat-input textarea:focus{outline:none;box-shadow:0 0 0 4px rgba(45,42,36,.06)}
 .chat-send{background:var(--fg);color:var(--bg);border-radius:11px;width:42px;height:42px;font-size:17px;flex:none;transition:all .15s}
 .chat-send:hover{transform:translateY(-1px)}
@@ -1609,15 +1615,50 @@ function closeThesisToBrief(){ $('thesis').classList.remove('shown'); $('brief')
     else if (dx < -50) goToOrg();
   });
 }());
-// "Add a new thesis" composer — files into the same GitHub-issue intake the desk grades.
+// "Add a new thesis" composer — files DIRECTLY into the GitHub-issue intake via the API.
+// No redirects: a fine-grained token (Issues read/write on jw-brief) is asked for ONCE and
+// kept in this device's localStorage only — it never appears in the page source. After
+// filing, the composer polls the issue and streams the desk's verdict back into this chat.
 (function(){
+  var REPO = 'JWincltd/jw-brief';
   var dock = $('thComposeDock'), log = $('thComposeLog'), ta = $('thComposeTa');
   if (!dock) return;
-  var addMsg = function(cls, html){ var d = document.createElement('div'); d.className = 'msg ' + cls; d.innerHTML = html; log.appendChild(d); log.scrollTop = log.scrollHeight; };
+  var addMsg = function(cls, html){ var d = document.createElement('div'); d.className = 'msg ' + cls; d.innerHTML = html; log.scrollTop = log.appendChild(d) && log.scrollHeight; return d; };
+  var api = function(path, opts){
+    return fetch('https://api.github.com/' + path, Object.assign({
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('jwGhToken'), 'Accept': 'application/vnd.github+json' },
+    }, opts || {}));
+  };
+  var needToken = function(){
+    addMsg('note', 'One-time setup: paste a GitHub token here so I can file theses for you (it stays on this device only).<br><br>' +
+      '<b>github.com → Settings → Developer settings → Fine-grained tokens → Generate</b>: Resource owner <b>JWincltd</b>, repository <b>jw-brief</b> only, permission <b>Issues: read &amp; write</b>. Paste the token (starts with <code>github_pat_</code>) into the box below and send.');
+  };
+  var looksLikeToken = function(t){ return /^(github_pat_|ghp_)[A-Za-z0-9_]{20,}$/.test(t); };
+
+  // After filing, watch the issue for the desk's verdict comment and stream it in here.
+  var pollVerdict = function(issueNumber, msgEl){
+    var tries = 0;
+    var timer = setInterval(function(){
+      if (++tries > 40) { clearInterval(timer); msgEl.innerHTML += '<br><br>Still grading — the verdict will appear on the Thesis Scout page with the next morning publish.'; return; }
+      api('repos/' + REPO + '/issues/' + issueNumber + '/comments').then(function(r){ return r.ok ? r.json() : []; }).then(function(cs){
+        var v = (cs || []).find(function(c){ return /Thesis desk —/.test(c.body || ''); });
+        if (v) {
+          clearInterval(timer);
+          addMsg('bot', fmtBot(v.body.replace(/^## /, '').replace(/\|[^\n]*\n/g, function(row){ return row.replace(/\s*\|\s*/g, ' · ').replace(/^ · | · $/g, '') + ''; })));
+          addMsg('note', 'Graded ✓ — it appears as a card on this page after the next morning publish, then updates daily (performance vs SPY + evidence).');
+        }
+      }).catch(function(){});
+    }, 20000);
+  };
+
   var greeted = false;
   $('thComposeOpen').onclick = function(){
     dock.classList.add('open');
-    if (!greeted) { greeted = true; addMsg('bot', 'Paste an article’s <b>text</b> (or write the idea in your own words) and send. I’ll file it to the thesis desk — it extracts the chain, researches the tickers, and grades it within minutes. The verdict posts to the GitHub thread immediately and appears on this page with the next morning publish.'); }
+    if (!greeted) {
+      greeted = true;
+      addMsg('bot', 'Paste an article’s <b>text</b> (or write the idea in your own words) and send — I’ll file it straight to the thesis desk, which extracts the chain, researches the tickers, and grades it within minutes. The verdict streams back into this chat.');
+      if (!localStorage.getItem('jwGhToken')) needToken();
+    }
     setTimeout(function(){ ta.focus(); }, 60);
   };
   $('thComposeClose').onclick = function(){ dock.classList.remove('open'); };
@@ -1625,15 +1666,37 @@ function closeThesisToBrief(){ $('thesis').classList.remove('shown'); $('brief')
     var t = ta.value.trim();
     if (!t) return;
     ta.value = '';
+
+    if (looksLikeToken(t)) {
+      localStorage.setItem('jwGhToken', t);
+      addMsg('user', 'github_pat_…' + t.slice(-4));
+      api('repos/' + REPO).then(function(r){
+        if (r.ok) addMsg('bot', 'Token saved on this device ✓ — you’re set. Paste a thesis whenever you’re ready.');
+        else { localStorage.removeItem('jwGhToken'); addMsg('note', 'That token couldn’t access ' + REPO + ' (HTTP ' + r.status + '). Check the resource owner is <b>JWincltd</b> and the repository is <b>jw-brief</b>, then paste it again.'); }
+      }).catch(function(){ addMsg('note', 'Couldn’t reach GitHub to verify — check the connection and paste the token again.'); localStorage.removeItem('jwGhToken'); });
+      return;
+    }
+
     addMsg('user', escc(t.length > 280 ? t.slice(0, 280) + '…' : t));
+    if (!localStorage.getItem('jwGhToken')) { needToken(); return; }
+
     var urlOnly = /^https?:\S+$/.test(t);
     var firstLine = t.split('\n')[0].replace(/\s+/g, ' ').slice(0, 60);
     var title = 'Thesis: ' + (urlOnly ? 'from link — ' + new Date().toISOString().slice(0, 10) : firstLine + (t.length > 60 ? '…' : ''));
-    var body = t.slice(0, 5500) + (t.length > 5500 ? '\n\n[truncated on paste — original was longer]' : '');
-    var issueUrl = 'https://github.com/JWincltd/jw-brief/issues/new?labels=thesis&title=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(body);
-    window.open(issueUrl, '_blank');
-    addMsg('bot', 'Filed — a GitHub tab opened with your thesis pre-filled. Tap <b>Submit new issue</b> there to hand it to the desk.' +
-      (urlOnly ? '<br><br><b>Heads up:</b> that looks like a link only — the desk can’t fetch pages yet, so paste the article text itself for a proper grade.' : ''));
+    var working = addMsg('bot', 'Filing…');
+    api('repos/' + REPO + '/issues', {
+      method: 'POST',
+      body: JSON.stringify({ title: title, body: t, labels: ['thesis'] }),
+    }).then(function(r){
+      if (r.status === 401 || r.status === 403) { localStorage.removeItem('jwGhToken'); working.innerHTML = ''; needToken(); return null; }
+      if (!r.ok) { working.innerHTML = 'Filing failed (HTTP ' + r.status + ') — try again in a moment.'; working.className = 'msg note'; return null; }
+      return r.json();
+    }).then(function(issue){
+      if (!issue) return;
+      working.innerHTML = 'Filed as <b>#' + issue.number + '</b> ✓ — the desk is researching and grading it now (usually 2–5 minutes). I’ll post the verdict here as soon as it lands.' +
+        (urlOnly ? '<br><br><b>Heads up:</b> that looks like a link only — the desk can’t fetch pages yet, so paste the article text itself for a proper grade.' : '');
+      pollVerdict(issue.number, working);
+    }).catch(function(){ working.innerHTML = 'Couldn’t reach GitHub — check the connection and try again.'; working.className = 'msg note'; });
   };
   ta.addEventListener('keydown', function(e){ if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('thComposeSend').click(); });
 }());
