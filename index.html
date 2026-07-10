@@ -249,6 +249,12 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-empty .hcm-t,.hcm-empty .hcm-count{color:var(--fg-mute)}
 .hcm-empty .hcm-hd::after{background:var(--line-2)}
 .hcm-none{flex:1;display:flex;align-items:center;min-height:56px;font-size:12px;color:var(--fg-mute);line-height:1.55}
+.hcm-live{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--fg-dim);flex:none;white-space:nowrap}
+.hcm-live .ld{width:6px;height:6px;border-radius:999px;background:var(--positive);animation:blink 2s infinite;flex:none}
+.hcm-live .ld.off{background:var(--fg-mute);animation:none}
+.hcm-live.setup{color:var(--fg-mute);cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase}
+.hcm-live.setup:hover{color:var(--fg-dim);border-color:var(--line-2)}
+.hcm-live + .hcm-count{margin-left:0}
 .hcm-rec{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--fg-mute);letter-spacing:.03em;margin:-6px 0 10px}
 .hcm-rec .up{color:var(--positive)}.hcm-rec .dn{color:var(--danger)}
 /* ===== thesis desk (structural ideas) ===== */
@@ -868,6 +874,48 @@ function enterBoard(skip) {
   });
 }());
 
+/* ---------- live quote on the conviction card (Finnhub, key device-local) ---------- */
+var jwLive = (function() {
+  var timer = null, sym = null;
+  var el = function() { return document.getElementById('hcmLive'); };
+  var key = function() { return localStorage.getItem('jwFhKey'); };
+  var render = function(html, cls) { var e = el(); if (e) { e.innerHTML = html; e.className = 'hcm-live' + (cls ? ' ' + cls : ''); } };
+  function tick() {
+    if (!el() || !sym || !key() || document.visibilityState !== 'visible') return;
+    fetch('https://finnhub.io/api/v1/quote?symbol=' + sym + '&token=' + key())
+      .then(function(r) {
+        if (r.status === 401 || r.status === 403) { localStorage.removeItem('jwFhKey'); setup(); return null; }
+        return r.json();
+      })
+      .then(function(q) {
+        if (!q) return;
+        if (!q.c) { render('<span class="ld off"></span>—'); return; }
+        var up = (q.dp || 0) >= 0;
+        render('<span class="ld"></span>$' + (+q.c).toFixed(2) + '&nbsp;<span class="' + (up ? 'up' : 'dn') + '">' + (up ? '+' : '') + (+q.dp || 0).toFixed(2) + '%</span>');
+      })
+      .catch(function() { render('<span class="ld off"></span>—'); });
+  }
+  function setup() {
+    render('⚡ live', 'setup');
+    var e = el();
+    if (e) e.onclick = function() {
+      var k = window.prompt('Paste your Finnhub API key to turn on live pricing (free at finnhub.io — the same key the pipeline uses). It stays on this device only.');
+      if (k && k.trim()) { localStorage.setItem('jwFhKey', k.trim()); e.onclick = null; tick(); }
+    };
+  }
+  document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'visible') tick(); });
+  return {
+    start: function(symbol) {
+      if (!el()) return;
+      sym = symbol;
+      if (!key()) { setup(); return; }
+      var e = el(); if (e) e.onclick = null;
+      tick();
+      if (!timer) timer = setInterval(tick, 30000);
+    },
+  };
+}());
+
 /* ---------- 3 high conviction moves ---------- */
 function renderHCM() {
   // hcm may be null/missing (older payloads, or the desk stood down) — every card
@@ -933,7 +981,7 @@ function renderHCM() {
   const buyHTML = buys.length ?
     '<div class="hcm-card hcm-buy hcm-r1" id="hcmBuyCard">' +
     (buys.length > 1 ? '<div class="hcm-pip-row" id="hcmPips">' + buys.map((_, i) => '<span class="hero-pip' + (i === 0 ? ' active' : '') + '" data-i="' + i + '"></span>').join('') + '</div>' : '') +
-    '<div class="hcm-hd"><span class="hcm-t" id="hcmBuyLab">Highest conviction</span>' + countHTML + '</div>' +
+    '<div class="hcm-hd"><span class="hcm-t" id="hcmBuyLab">Highest conviction</span><span class="hcm-live" id="hcmLive"></span>' + countHTML + '</div>' +
     recLine('buy') +
     '<div class="hcm-buy-vp" id="hcmBuySlides">' + buildBuySlide(buys[0]) + '</div>' +
     '</div>' :
@@ -958,6 +1006,7 @@ function renderHCM() {
     recLine('breakdown') +
     (bd.length ? bd.map(playHTML).join('') : emptyNote('No breakdown setups this morning — nothing cleared the desk.')) + '</div>';
   $('hcmBand').innerHTML = '<div class="hcm-grid">' + buyHTML + boHTML + bdHTML + '</div>';
+  if (buys.length) jwLive.start(buys[0].symbol);
 
   // Lock buy card height after first paint so carousel switches never resize the card
   requestAnimationFrame(function() {
@@ -1007,6 +1056,7 @@ function renderHCM() {
       if (cnt) cnt.textContent = (buyIdx + 1) + ' / ' + buys.length;
       var pipRow = $('hcmPips');
       if (pipRow) pipRow.querySelectorAll('.hero-pip').forEach(function(p, j) { p.classList.toggle('active', j === buyIdx); });
+      jwLive.start(buys[buyIdx].symbol);   // live quote follows the active pick
 
       setTimeout(function() {
         var v = $('hcmBuySlides');
