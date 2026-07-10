@@ -710,7 +710,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
         <button class="chat-close" id="thComposeClose">✕</button>
       </div>
       <div class="chat-log" id="thComposeLog"></div>
-      <div class="chat-input"><textarea id="thComposeTa" rows="3" placeholder="Paste an article's text (or your own idea)…"></textarea><button class="chat-send" id="thComposeSend">↑</button></div>
+      <div class="chat-input"><textarea id="thComposeTa" rows="3" placeholder="Paste an article, a link, or your own idea…"></textarea><button class="chat-send" id="thComposeSend">↑</button></div>
     </div>
   </div>
 </div>
@@ -1656,7 +1656,7 @@ function closeThesisToBrief(){ $('thesis').classList.remove('shown'); $('brief')
     dock.classList.add('open');
     if (!greeted) {
       greeted = true;
-      addMsg('bot', 'Paste an article’s <b>text</b> (or write the idea in your own words) and send — I’ll file it straight to the thesis desk, which extracts the chain, researches the tickers, and grades it within minutes. The verdict streams back into this chat.');
+      addMsg('bot', 'Paste an article — its <b>text or a link</b> — or write the idea in your own words, and send. I’ll file it straight to the thesis desk, which reads it, extracts the chain, researches the tickers, and grades it within minutes. The verdict streams back into this chat.');
       if (!localStorage.getItem('jwGhToken')) needToken();
     }
     setTimeout(function(){ ta.focus(); }, 60);
@@ -1670,9 +1670,15 @@ function closeThesisToBrief(){ $('thesis').classList.remove('shown'); $('brief')
     if (looksLikeToken(t)) {
       localStorage.setItem('jwGhToken', t);
       addMsg('user', 'github_pat_…' + t.slice(-4));
-      api('repos/' + REPO).then(function(r){
-        if (r.ok) addMsg('bot', 'Token saved on this device ✓ — you’re set. Paste a thesis whenever you’re ready.');
-        else { localStorage.removeItem('jwGhToken'); addMsg('note', 'That token couldn’t access ' + REPO + ' (HTTP ' + r.status + '). Check the resource owner is <b>JWincltd</b> and the repository is <b>jw-brief</b>, then paste it again.'); }
+      // Verify the permission we actually need (Issues), not just repo visibility — a token
+      // scoped to the wrong repo or missing Issues RW passed the old check and then failed
+      // silently at filing time.
+      api('repos/' + REPO + '/issues?per_page=1&state=all').then(function(r){
+        if (r.ok) addMsg('bot', 'Token verified ✓ — it can read and file issues on ' + REPO + '. Saved on this device; paste a thesis whenever you’re ready.');
+        else {
+          localStorage.removeItem('jwGhToken');
+          addMsg('note', 'That token can’t work with issues on <b>' + REPO + '</b> (HTTP ' + r.status + '). When generating it, make sure of all three: resource owner <b>JWincltd</b> · repository access <b>jw-brief</b> · repository permission <b>Issues: read &amp; write</b>. Then paste the new token here.');
+        }
       }).catch(function(){ addMsg('note', 'Couldn’t reach GitHub to verify — check the connection and paste the token again.'); localStorage.removeItem('jwGhToken'); });
       return;
     }
@@ -1688,13 +1694,18 @@ function closeThesisToBrief(){ $('thesis').classList.remove('shown'); $('brief')
       method: 'POST',
       body: JSON.stringify({ title: title, body: t, labels: ['thesis'] }),
     }).then(function(r){
-      if (r.status === 401 || r.status === 403) { localStorage.removeItem('jwGhToken'); working.innerHTML = ''; needToken(); return null; }
+      if (r.status === 401 || r.status === 403 || r.status === 404) {
+        localStorage.removeItem('jwGhToken');
+        working.className = 'msg note';
+        working.innerHTML = 'GitHub refused the filing (HTTP ' + r.status + ') — the saved token can’t <b>create</b> issues on ' + REPO + ', so I’ve cleared it. Generate a fresh fine-grained token with resource owner <b>JWincltd</b>, repository <b>jw-brief</b>, permission <b>Issues: read &amp; write</b>, paste it here, and then resend your thesis.';
+        return null;
+      }
       if (!r.ok) { working.innerHTML = 'Filing failed (HTTP ' + r.status + ') — try again in a moment.'; working.className = 'msg note'; return null; }
       return r.json();
     }).then(function(issue){
       if (!issue) return;
       working.innerHTML = 'Filed as <b>#' + issue.number + '</b> ✓ — the desk is researching and grading it now (usually 2–5 minutes). I’ll post the verdict here as soon as it lands.' +
-        (urlOnly ? '<br><br><b>Heads up:</b> that looks like a link only — the desk can’t fetch pages yet, so paste the article text itself for a proper grade.' : '');
+        (urlOnly ? '<br><br>Link detected — the desk will fetch and read the page. Public articles work best; if it’s paywalled the grade may come back thin, in which case paste the text itself.' : '');
       pollVerdict(issue.number, working);
     }).catch(function(){ working.innerHTML = 'Couldn’t reach GitHub — check the connection and try again.'; working.className = 'msg note'; });
   };
