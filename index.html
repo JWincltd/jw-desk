@@ -1044,7 +1044,7 @@ function renderTheses() {
   thesisRendered = true;
   var list = Array.isArray(B.theses) ? B.theses.filter(function(t) { return t.status === 'open'; }) : [];
   $('thesisSub').textContent = list.length
-    ? list.length + ' open thesis' + (list.length === 1 ? '' : 'es') + ' · updated with each morning publish'
+    ? list.length + ' open ' + (list.length === 1 ? 'thesis' : 'theses') + ' · performance and evidence update each morning'
     : 'structural ideas — researched, graded, and tracked against the market until they resolve';
   if (!list.length) {
     host.innerHTML = '<div class="th-card"><div class="hcm-none">No theses on file yet. Tap “Add a new thesis” below — paste an article or write the idea, and the desk researches, grades, and tracks it here.</div></div>';
@@ -1083,7 +1083,7 @@ function renderTheses() {
 
   host2.querySelectorAll('.hcm-info').forEach(function(btn) {
     btn.onclick = function() {
-      var detail = this.closest('.th-row').querySelector('.th-detail');
+      var detail = this.closest('.th-card').querySelector('.th-detail');
       var on = detail.classList.toggle('show');
       this.classList.toggle('on', on);
       this.textContent = on ? '▾ Details' : '▸ Details';
