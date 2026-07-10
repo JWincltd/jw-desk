@@ -1639,13 +1639,13 @@ function closeThesisToBrief(){ $('thesis').classList.remove('shown'); $('brief')
   var pollVerdict = function(issueNumber, msgEl){
     var tries = 0;
     var timer = setInterval(function(){
-      if (++tries > 40) { clearInterval(timer); msgEl.innerHTML += '<br><br>Still grading — the verdict will appear on the Thesis Scout page with the next morning publish.'; return; }
+      if (++tries > 40) { clearInterval(timer); msgEl.innerHTML += '<br><br>Still grading — check back here or on the GitHub thread; the card lands on this page automatically once graded.'; return; }
       api('repos/' + REPO + '/issues/' + issueNumber + '/comments').then(function(r){ return r.ok ? r.json() : []; }).then(function(cs){
         var v = (cs || []).find(function(c){ return /Thesis desk —/.test(c.body || ''); });
         if (v) {
           clearInterval(timer);
           addMsg('bot', fmtBot(v.body.replace(/^## /, '').replace(/\|[^\n]*\n/g, function(row){ return row.replace(/\s*\|\s*/g, ' · ').replace(/^ · | · $/g, '') + ''; })));
-          addMsg('note', 'Graded ✓ — it appears as a card on this page after the next morning publish, then updates daily (performance vs SPY + evidence).');
+          addMsg('note', 'Graded ✓ — the card is being published to this page now (refresh in a minute or two), then updates daily with performance vs SPY and evidence.');
         }
       }).catch(function(){});
     }, 20000);
