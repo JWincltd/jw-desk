@@ -997,14 +997,16 @@ function renderHCM() {
     '<div class="hcm-pdetail"><div class="hcm-ppill"><span class="pp-lab">IV</span><span>' + escc(p.iv) + '</span></div><div class="hcm-ppill"><span class="pp-lab">Confirms</span><span>' + escc(p.confirms) + '</span></div></div>' +
     '</div>';
   const bo = hcm.breakout || [], bd = hcm.breakdown || [];
+  // empty sections carry the desk's specific reason when the pipeline provides one
+  const sn = hcm.sectionNotes || {};
   const boHTML = '<div class="hcm-card hcm-bo' + (bo.length ? '' : ' hcm-empty') + '">' +
     '<div class="hcm-hd"><span class="hcm-t">Breakout plays</span><span class="hcm-count">' + bo.length + (bo.length === 1 ? ' watch' : ' watches') + '</span></div>' +
     recLine('breakout') +
-    (bo.length ? bo.map(playHTML).join('') : emptyNote('No breakout setups this morning — nothing cleared the desk.')) + '</div>';
+    (bo.length ? bo.map(playHTML).join('') : emptyNote(sn.breakout || 'No breakout setups this morning — nothing cleared the desk.')) + '</div>';
   const bdHTML = '<div class="hcm-card hcm-bd' + (bd.length ? '' : ' hcm-empty') + '">' +
     '<div class="hcm-hd"><span class="hcm-t">Breakdown plays</span><span class="hcm-count">' + bd.length + (bd.length === 1 ? ' watch' : ' watches') + '</span></div>' +
     recLine('breakdown') +
-    (bd.length ? bd.map(playHTML).join('') : emptyNote('No breakdown setups this morning — nothing cleared the desk.')) + '</div>';
+    (bd.length ? bd.map(playHTML).join('') : emptyNote(sn.breakdown || 'No breakdown setups this morning — nothing cleared the desk.')) + '</div>';
   $('hcmBand').innerHTML = '<div class="hcm-grid">' + buyHTML + boHTML + bdHTML + '</div>';
   if (buys.length) jwLive.start(buys[0].symbol);
 
