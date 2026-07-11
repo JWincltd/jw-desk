@@ -58,6 +58,16 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   .nav-sep{font-size:10px}
 }
 @media(max-width:360px){.page-nav{font-size:9.5px}}
+/* mobile: the dark headline card reads better AFTER the three play cards */
+@media(max-width:640px){
+  #board{display:flex;flex-direction:column}
+  #board > .ticker{order:1}
+  #board > .page-nav{order:2}
+  #board > .hcm-band{order:3}
+  #board > .cHead{order:4}
+  #board > .wrapC{order:5}
+  #board > .foot{order:6}
+}
 .page-step:not(.on):hover{color:var(--fg-dim)}
 .page-step.on{color:var(--fg);cursor:default;pointer-events:none}
 .page-step .dot{width:7px;height:7px;border-radius:999px;background:var(--line-2);flex:none}
