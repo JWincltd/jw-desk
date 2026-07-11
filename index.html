@@ -1902,8 +1902,23 @@ window.addEventListener('resize', function() {
   }
   var page = null;
   function setPull(px){
-    if (!page) page = activePage();
-    backdrop.style.display = 'block';   // the gap shows a clean page background, not the layer beneath
+    if (!page) {
+      page = activePage();
+      if (page.id === 'board') {
+        // the board IS the bottom layer — its gap already reveals the page background;
+        // an opaque backdrop here would cover the board itself (the blank-page bug)
+        backdrop.style.display = 'none';
+        ptr.style.zIndex = 55;
+      } else {
+        // slot the clean gap DIRECTLY beneath the pulled page: a lower page can linger
+        // shown underneath (thesis stays under the firm for the back-swipe), so a fixed
+        // z-level backdrop showed its heading in the gap on the first pull
+        var z = parseInt(getComputedStyle(page).zIndex, 10) || 60;
+        backdrop.style.zIndex = z - 1;
+        ptr.style.zIndex = z - 1;       // appended after the backdrop, so it paints above it
+        backdrop.style.display = 'block';
+      }
+    }
     page.style.transition = 'none';
     page.style.transform = 'translateY(' + px + 'px)';
     ptr.style.transition = 'none';
