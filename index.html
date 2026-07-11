@@ -262,7 +262,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-live.setup{color:var(--fg-mute);cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase}
 .hcm-live.setup:hover{color:var(--fg-dim);border-color:var(--line-2)}
 
-#ptr{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);left:50%;z-index:210;transform:translate(-50%,-70px);opacity:0;pointer-events:none;transition:transform .22s var(--ease),opacity .22s}
+#ptr{position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);left:50%;z-index:15;transform:translate(-50%,-40px);opacity:0;pointer-events:none;transition:transform .22s var(--ease),opacity .22s}
 #ptr .c{position:relative;display:block;width:28px;height:28px}
 #ptr .c i{position:absolute;left:12.75px;top:2px;width:2.5px;height:7.5px;border-radius:2px;background:var(--fg-mute);transform-origin:1.25px 12px}
 #ptr .c i:nth-child(1){transform:rotate(0deg);opacity:1.00}
@@ -1886,17 +1886,36 @@ window.addEventListener('resize', function() {
     }
     return document.scrollingElement;
   }
+  // the element that visually follows the finger — native iOS pulls the PAGE, not a widget
+  function activePage(){
+    if (document.getElementById('org').classList.contains('shown')) return document.getElementById('org');
+    if (document.getElementById('thesis').classList.contains('shown')) return document.getElementById('thesis');
+    if (!document.getElementById('brief').classList.contains('gone')) return document.getElementById('brief');
+    return document.getElementById('board');
+  }
+  var page = null;
   function setPull(px){
+    if (!page) page = activePage();
+    page.style.transition = 'none';
+    page.style.transform = 'translateY(' + px + 'px)';
     ptr.style.transition = 'none';
-    ptr.style.opacity = Math.min(px / 40, 1);
-    ptr.style.transform = 'translate(-50%,' + (px - 70) + 'px)';
-    wheel.style.transform = 'rotate(' + Math.round(px * 2.4) + 'deg)';   // materialize-spin with the pull, like iOS
+    ptr.style.opacity = Math.min(px / 36, 1);
+    ptr.style.transform = 'translate(-50%,' + Math.round(px * 0.42 - 26) + 'px)';   // ride centered in the opening gap
+    wheel.style.transform = 'rotate(' + Math.round(px * 2.4) + 'deg)';               // materialize-spin with the pull
     ptr.classList.toggle('armed', px >= ARMED_AT);
   }
+  function releasePage(holdPx){
+    if (!page) return;
+    var el = page; page = null;
+    el.style.transition = 'transform .3s var(--ease)';
+    el.style.transform = holdPx ? 'translateY(' + holdPx + 'px)' : '';
+    if (!holdPx) setTimeout(function(){ el.style.transition = ''; }, 320);          // hand transform back to the CSS rules
+  }
   function resetPull(){
+    releasePage(0);
     ptr.style.transition = '';
     ptr.style.opacity = 0;
-    ptr.style.transform = 'translate(-50%,-70px)';
+    ptr.style.transform = 'translate(-50%,-40px)';
     wheel.style.transform = '';
     ptr.classList.remove('armed');
   }
@@ -1924,11 +1943,12 @@ window.addEventListener('resize', function() {
     if (sy === null) return;
     sy = null;
     if (engaged && dist >= ARMED_AT) {
+      releasePage(52);                          // page holds open at the gap, native-style
       wheel.style.transform = '';               // hand the wheel to the tick animation
       ptr.classList.add('spin');
       ptr.style.transition = '';
-      ptr.style.transform = 'translate(-50%,10px)';
-      setTimeout(function(){ location.reload(); }, 300);
+      ptr.style.transform = 'translate(-50%,8px)';
+      setTimeout(function(){ location.reload(); }, 350);
     } else resetPull();
     engaged = false; dist = 0;
   }
