@@ -263,7 +263,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-live.setup{color:var(--fg-mute);cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase}
 .hcm-live.setup:hover{color:var(--fg-dim);border-color:var(--line-2)}
 
-#ptr{position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);left:50%;z-index:15;transform:translate(-50%,-40px);opacity:0;pointer-events:none;transition:transform .22s var(--ease),opacity .22s}
+#ptr{position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);left:50%;z-index:55;transform:translate(-50%,-40px);opacity:0;pointer-events:none;transition:transform .22s var(--ease),opacity .22s}
+#ptrBackdrop{position:fixed;inset:0;background:var(--bg);z-index:50;display:none;pointer-events:none}
 #ptr .c{position:relative;display:block;width:28px;height:28px}
 #ptr .c i{position:absolute;left:12.75px;top:2px;width:2.5px;height:7.5px;border-radius:2px;background:var(--fg-mute);transform-origin:1.25px 12px}
 #ptr .c i:nth-child(1){transform:rotate(0deg);opacity:1.00}
@@ -1873,6 +1874,9 @@ window.addEventListener('resize', function() {
   document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'visible') check(); });
 
   // ---- pull-to-refresh (standalone only; browsers keep their native gesture) ----
+  var backdrop = document.createElement('div');
+  backdrop.id = 'ptrBackdrop';
+  document.body.appendChild(backdrop);
   var ptr = document.createElement('div');
   ptr.id = 'ptr'; ptr.innerHTML = '<span class="c">' + new Array(13).join('<i></i>') + '</span>';
   document.body.appendChild(ptr);
@@ -1899,6 +1903,7 @@ window.addEventListener('resize', function() {
   var page = null;
   function setPull(px){
     if (!page) page = activePage();
+    backdrop.style.display = 'block';   // the gap shows a clean page background, not the layer beneath
     page.style.transition = 'none';
     page.style.transform = 'translateY(' + px + 'px)';
     ptr.style.transition = 'none';
@@ -1916,6 +1921,7 @@ window.addEventListener('resize', function() {
   }
   function resetPull(){
     releasePage(0);
+    setTimeout(function(){ backdrop.style.display = 'none'; }, 320);   // after the spring-back
     ptr.style.transition = '';
     ptr.style.opacity = 0;
     ptr.style.transform = 'translate(-50%,-40px)';
