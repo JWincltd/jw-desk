@@ -12,7 +12,7 @@
 <style>
 :root{--bg:#FAF9F5;--bg-2:#F4F1EA;--bg-3:#EBE7DC;--fg:#1F1E1B;--fg-dim:rgba(31,30,27,.66);--fg-mute:rgba(31,30,27,.42);--line:rgba(31,30,27,.08);--line-2:rgba(31,30,27,.18);--accent:#E5E9E0;--amber:#B07A2E;--positive:#4A8762;--danger:#A8442C;--r:14px;--ease:cubic-bezier(.4,0,.2,1);--spring:cubic-bezier(.34,1.56,.64,1)}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{overflow-x:hidden;overscroll-behavior-x:none}
+html,body{overflow-x:hidden;overscroll-behavior:none}
 body{background:var(--bg);color:var(--fg);font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .mono{font-family:'IBM Plex Mono',monospace}
 .lab{font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:11.5px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--fg-dim)}
@@ -261,16 +261,24 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-live .ld.off{background:var(--fg-mute);animation:none}
 .hcm-live.setup{color:var(--fg-mute);cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase}
 .hcm-live.setup:hover{color:var(--fg-dim);border-color:var(--line-2)}
-/* standalone app: kill the body rubber-band so pull-to-refresh owns the gesture on the
-   board (iOS sends touchcancel once its native bounce starts, eating the pull) */
-html.standalone, html.standalone body{overscroll-behavior-y:none}
-#ptr{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:50%;z-index:210;transform:translate(-50%,-70px);opacity:0;pointer-events:none;transition:transform .22s var(--ease),opacity .22s}
-#ptr .c{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:999px;background:var(--bg);border:1px solid var(--line-2);box-shadow:0 6px 18px rgba(31,30,27,.16);color:var(--fg-dim);font-size:15px}
-#ptr .c i{font-style:normal;transition:transform .18s var(--ease)}
-#ptr.armed .c i{transform:rotate(180deg)}
-#ptr.armed .c{color:var(--fg);border-color:var(--fg-mute)}
-#ptr.spin .c i{animation:ptrspin .7s linear infinite}
-@keyframes ptrspin{to{transform:rotate(360deg)}}
+
+#ptr{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);left:50%;z-index:210;transform:translate(-50%,-70px);opacity:0;pointer-events:none;transition:transform .22s var(--ease),opacity .22s}
+#ptr .c{position:relative;display:block;width:28px;height:28px}
+#ptr .c i{position:absolute;left:12.75px;top:2px;width:2.5px;height:7.5px;border-radius:2px;background:var(--fg-mute);transform-origin:1.25px 12px}
+#ptr .c i:nth-child(1){transform:rotate(0deg);opacity:1.00}
+#ptr .c i:nth-child(2){transform:rotate(30deg);opacity:0.94}
+#ptr .c i:nth-child(3){transform:rotate(60deg);opacity:0.88}
+#ptr .c i:nth-child(4){transform:rotate(90deg);opacity:0.81}
+#ptr .c i:nth-child(5){transform:rotate(120deg);opacity:0.75}
+#ptr .c i:nth-child(6){transform:rotate(150deg);opacity:0.69}
+#ptr .c i:nth-child(7){transform:rotate(180deg);opacity:0.62}
+#ptr .c i:nth-child(8){transform:rotate(210deg);opacity:0.56}
+#ptr .c i:nth-child(9){transform:rotate(240deg);opacity:0.50}
+#ptr .c i:nth-child(10){transform:rotate(270deg);opacity:0.44}
+#ptr .c i:nth-child(11){transform:rotate(300deg);opacity:0.38}
+#ptr .c i:nth-child(12){transform:rotate(330deg);opacity:0.31}
+#ptr.spin .c{animation:ptrtick .8s steps(12,end) infinite}
+@keyframes ptrtick{to{transform:rotate(360deg)}}
 .hcm-live + .hcm-count{margin-left:0}
 .hcm-rec{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--fg-mute);letter-spacing:.03em;margin:-6px 0 10px}
 .hcm-rec .up{color:var(--positive)}.hcm-rec .dn{color:var(--danger)}
@@ -1846,9 +1854,9 @@ window.addEventListener('resize', function() {
 // Home-Screen app mode has no browser chrome: add a refresh button beside each clock and
 // auto-reload on resume when a newer board has published (ETag check against this page).
 (function(){
-  var standalone = window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-  if (!standalone) return;
-  document.documentElement.classList.add('standalone');
+  // universal: Safari's native gesture only reached the Your-book tab (the other pages
+  // scroll inside contained panels), so this is THE pull-to-refresh everywhere; the
+  // overscroll-behavior rule above keeps the native one from doubling it.
   function check(){
     fetch(location.href, { method: 'HEAD', cache: 'no-store' }).then(function(r){
       var tag = r.headers.get('etag') || r.headers.get('last-modified');
@@ -1863,8 +1871,9 @@ window.addEventListener('resize', function() {
 
   // ---- pull-to-refresh (standalone only; browsers keep their native gesture) ----
   var ptr = document.createElement('div');
-  ptr.id = 'ptr'; ptr.innerHTML = '<span class="c"><i>\u2193</i></span>';
+  ptr.id = 'ptr'; ptr.innerHTML = '<span class="c">' + new Array(13).join('<i></i>') + '</span>';
   document.body.appendChild(ptr);
+  var wheel = ptr.firstChild;
   var ARMED_AT = 60, MAX = 96;
   var sy = null, sx = null, dist = 0, engaged = false;
 
@@ -1881,12 +1890,14 @@ window.addEventListener('resize', function() {
     ptr.style.transition = 'none';
     ptr.style.opacity = Math.min(px / 40, 1);
     ptr.style.transform = 'translate(-50%,' + (px - 70) + 'px)';
+    wheel.style.transform = 'rotate(' + Math.round(px * 2.4) + 'deg)';   // materialize-spin with the pull, like iOS
     ptr.classList.toggle('armed', px >= ARMED_AT);
   }
   function resetPull(){
     ptr.style.transition = '';
     ptr.style.opacity = 0;
     ptr.style.transform = 'translate(-50%,-70px)';
+    wheel.style.transform = '';
     ptr.classList.remove('armed');
   }
   document.addEventListener('touchstart', function(e){
@@ -1913,10 +1924,11 @@ window.addEventListener('resize', function() {
     if (sy === null) return;
     sy = null;
     if (engaged && dist >= ARMED_AT) {
+      wheel.style.transform = '';               // hand the wheel to the tick animation
       ptr.classList.add('spin');
       ptr.style.transition = '';
-      ptr.style.transform = 'translate(-50%,8px)';
-      setTimeout(function(){ location.reload(); }, 250);
+      ptr.style.transform = 'translate(-50%,10px)';
+      setTimeout(function(){ location.reload(); }, 300);
     } else resetPull();
     engaged = false; dist = 0;
   }
