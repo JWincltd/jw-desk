@@ -1,0 +1,12 @@
+{
+  "name": "JW Private Wealth",
+  "short_name": "JW Desk",
+  "display": "standalone",
+  "start_url": ".",
+  "background_color": "#FAF7F1",
+  "theme_color": "#211F1B",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
