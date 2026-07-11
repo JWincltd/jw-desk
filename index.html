@@ -1,4 +1,11 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="JW Desk">
+<meta name="theme-color" content="#211F1B">
+<link rel="apple-touch-icon" href="icon-180.png">
 <title>JW Desk — Wed, Jun 17, 2026, 05:22 PM ET</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
@@ -254,6 +261,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-live .ld.off{background:var(--fg-mute);animation:none}
 .hcm-live.setup{color:var(--fg-mute);cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase}
 .hcm-live.setup:hover{color:var(--fg-dim);border-color:var(--line-2)}
+.app-refresh{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;margin-left:10px;border:1px solid var(--line);border-radius:8px;color:var(--fg-mute);font-size:14px;line-height:1;vertical-align:middle;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.app-refresh:active{transform:rotate(180deg)}
+.app-refresh:hover{color:var(--fg-dim);border-color:var(--line-2)}
 .hcm-live + .hcm-count{margin-left:0}
 .hcm-rec{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--fg-mute);letter-spacing:.03em;margin:-6px 0 10px}
 .hcm-rec .up{color:var(--positive)}.hcm-rec .dn{color:var(--danger)}
@@ -1826,5 +1836,28 @@ window.addEventListener('resize', function() {
   _navW = window.innerWidth;
   syncNavY();
 });
+// Home-Screen app mode has no browser chrome: add a refresh button beside each clock and
+// auto-reload on resume when a newer board has published (ETag check against this page).
+(function(){
+  var standalone = window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  if (!standalone) return;
+  document.querySelectorAll('.when').forEach(function(w){
+    var b = document.createElement('button');
+    b.className = 'app-refresh'; b.textContent = '\u21bb'; b.title = 'Refresh';
+    b.onclick = function(){ location.reload(); };
+    w.appendChild(b);
+  });
+  function check(){
+    fetch(location.href, { method: 'HEAD', cache: 'no-store' }).then(function(r){
+      var tag = r.headers.get('etag') || r.headers.get('last-modified');
+      if (!tag) return;
+      var prev = sessionStorage.getItem('jwBoardTag');
+      if (prev && prev !== tag) { location.reload(); return; }
+      sessionStorage.setItem('jwBoardTag', tag);
+    }).catch(function(){});
+  }
+  check();
+  document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'visible') check(); });
+}());
 </script>
 </body></html>
