@@ -261,9 +261,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-live .ld.off{background:var(--fg-mute);animation:none}
 .hcm-live.setup{color:var(--fg-mute);cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase}
 .hcm-live.setup:hover{color:var(--fg-dim);border-color:var(--line-2)}
-.app-refresh{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;margin-left:10px;border:1px solid var(--line);border-radius:8px;color:var(--fg-mute);font-size:14px;line-height:1;vertical-align:middle;transition:all .15s;-webkit-tap-highlight-color:transparent}
-.app-refresh:active{transform:rotate(180deg)}
-.app-refresh:hover{color:var(--fg-dim);border-color:var(--line-2)}
+/* standalone app: kill the body rubber-band so pull-to-refresh owns the gesture on the
+   board (iOS sends touchcancel once its native bounce starts, eating the pull) */
+html.standalone, html.standalone body{overscroll-behavior-y:none}
 #ptr{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:50%;z-index:210;transform:translate(-50%,-70px);opacity:0;pointer-events:none;transition:transform .22s var(--ease),opacity .22s}
 #ptr .c{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:999px;background:var(--bg);border:1px solid var(--line-2);box-shadow:0 6px 18px rgba(31,30,27,.16);color:var(--fg-dim);font-size:15px}
 #ptr .c i{font-style:normal;transition:transform .18s var(--ease)}
@@ -1848,12 +1848,7 @@ window.addEventListener('resize', function() {
 (function(){
   var standalone = window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
   if (!standalone) return;
-  document.querySelectorAll('.when').forEach(function(w){
-    var b = document.createElement('button');
-    b.className = 'app-refresh'; b.textContent = '\u21bb'; b.title = 'Refresh';
-    b.onclick = function(){ location.reload(); };
-    w.appendChild(b);
-  });
+  document.documentElement.classList.add('standalone');
   function check(){
     fetch(location.href, { method: 'HEAD', cache: 'no-store' }).then(function(r){
       var tag = r.headers.get('etag') || r.headers.get('last-modified');
@@ -1914,7 +1909,7 @@ window.addEventListener('resize', function() {
     dist = Math.max(0, Math.min(dy * 0.5, MAX));           // damped, like the native feel
     setPull(dist);
   }, { passive: true });
-  document.addEventListener('touchend', function(){
+  function endPull(){
     if (sy === null) return;
     sy = null;
     if (engaged && dist >= ARMED_AT) {
@@ -1924,7 +1919,9 @@ window.addEventListener('resize', function() {
       setTimeout(function(){ location.reload(); }, 250);
     } else resetPull();
     engaged = false; dist = 0;
-  }, { passive: true });
+  }
+  document.addEventListener('touchend', endPull, { passive: true });
+  document.addEventListener('touchcancel', endPull, { passive: true });
 }());
 </script>
 </body></html>
