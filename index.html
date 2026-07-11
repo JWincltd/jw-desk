@@ -264,6 +264,13 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .app-refresh{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;margin-left:10px;border:1px solid var(--line);border-radius:8px;color:var(--fg-mute);font-size:14px;line-height:1;vertical-align:middle;transition:all .15s;-webkit-tap-highlight-color:transparent}
 .app-refresh:active{transform:rotate(180deg)}
 .app-refresh:hover{color:var(--fg-dim);border-color:var(--line-2)}
+#ptr{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:50%;z-index:210;transform:translate(-50%,-70px);opacity:0;pointer-events:none;transition:transform .22s var(--ease),opacity .22s}
+#ptr .c{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:999px;background:var(--bg);border:1px solid var(--line-2);box-shadow:0 6px 18px rgba(31,30,27,.16);color:var(--fg-dim);font-size:15px}
+#ptr .c i{font-style:normal;transition:transform .18s var(--ease)}
+#ptr.armed .c i{transform:rotate(180deg)}
+#ptr.armed .c{color:var(--fg);border-color:var(--fg-mute)}
+#ptr.spin .c i{animation:ptrspin .7s linear infinite}
+@keyframes ptrspin{to{transform:rotate(360deg)}}
 .hcm-live + .hcm-count{margin-left:0}
 .hcm-rec{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--fg-mute);letter-spacing:.03em;margin:-6px 0 10px}
 .hcm-rec .up{color:var(--positive)}.hcm-rec .dn{color:var(--danger)}
@@ -1858,6 +1865,66 @@ window.addEventListener('resize', function() {
   }
   check();
   document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'visible') check(); });
+
+  // ---- pull-to-refresh (standalone only; browsers keep their native gesture) ----
+  var ptr = document.createElement('div');
+  ptr.id = 'ptr'; ptr.innerHTML = '<span class="c"><i>\u2193</i></span>';
+  document.body.appendChild(ptr);
+  var ARMED_AT = 60, MAX = 96;
+  var sy = null, sx = null, dist = 0, engaged = false;
+
+  function activeScroller(){
+    if (document.getElementById('org').classList.contains('shown')) return document.querySelector('.org-wrap');
+    if (document.getElementById('thesis').classList.contains('shown')) return document.querySelector('.th-wrap');
+    if (!document.getElementById('brief').classList.contains('gone')) {
+      var w = document.querySelector('#brief .hm-wrap');
+      return (w && w.scrollHeight > w.clientHeight) ? w : { scrollTop: 0 };
+    }
+    return document.scrollingElement;
+  }
+  function setPull(px){
+    ptr.style.transition = 'none';
+    ptr.style.opacity = Math.min(px / 40, 1);
+    ptr.style.transform = 'translate(-50%,' + (px - 70) + 'px)';
+    ptr.classList.toggle('armed', px >= ARMED_AT);
+  }
+  function resetPull(){
+    ptr.style.transition = '';
+    ptr.style.opacity = 0;
+    ptr.style.transform = 'translate(-50%,-70px)';
+    ptr.classList.remove('armed');
+  }
+  document.addEventListener('touchstart', function(e){
+    sy = null;
+    if (e.touches.length !== 1) return;
+    if (e.target.closest('#chatDock, #thComposeDock, #hcmBuyCard, #hero')) return;
+    var sc = activeScroller();
+    var top = sc === document.scrollingElement ? window.scrollY : (sc.scrollTop || 0);
+    if (top > 2) return;
+    sy = e.touches[0].clientY; sx = e.touches[0].clientX; dist = 0; engaged = false;
+  }, { passive: true });
+  document.addEventListener('touchmove', function(e){
+    if (sy === null) return;
+    var dy = e.touches[0].clientY - sy, dx = e.touches[0].clientX - sx;
+    if (!engaged) {
+      if (dy > 14 && dy > Math.abs(dx) * 1.5) engaged = true;
+      else if (Math.abs(dx) > 14) { sy = null; return; }   // horizontal gesture — hands off
+      else return;
+    }
+    dist = Math.max(0, Math.min(dy * 0.5, MAX));           // damped, like the native feel
+    setPull(dist);
+  }, { passive: true });
+  document.addEventListener('touchend', function(){
+    if (sy === null) return;
+    sy = null;
+    if (engaged && dist >= ARMED_AT) {
+      ptr.classList.add('spin');
+      ptr.style.transition = '';
+      ptr.style.transform = 'translate(-50%,8px)';
+      setTimeout(function(){ location.reload(); }, 250);
+    } else resetPull();
+    engaged = false; dist = 0;
+  }, { passive: true });
 }());
 </script>
 </body></html>
