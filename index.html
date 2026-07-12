@@ -1863,7 +1863,7 @@ window.addEventListener('resize', function() {
   _navW = window.innerWidth;
   syncNavY();
 });
-// Home-Screen app mode has no browser chrome: add a refresh button beside each clock and
+// Home-Screen app mode has no browser chrome: it gets a pull-to-refresh gesture and an
 // auto-reload on resume when a newer board has published (ETag check against this page).
 (function(){
   // STANDALONE ONLY: Safari gets its native pull-to-refresh untouched (native-first);
@@ -1871,13 +1871,22 @@ window.addEventListener('resize', function() {
   var standalone = window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
   if (!standalone) return;
   document.documentElement.classList.add('standalone');
+  // Reload MUST bypass the HTTP cache: GitHub Pages caches the page ~10 min, and a plain
+  // location.reload() serves that stale copy — the checker (which bypasses cache) then sees
+  // a newer version again and reloads again: the flicker loop. A cache-busting URL always
+  // comes fresh from the network.
+  function freshReload(){ location.replace(location.pathname + '?r=' + Date.now()); }
   function check(){
-    fetch(location.href, { method: 'HEAD', cache: 'no-store' }).then(function(r){
+    fetch(location.pathname, { method: 'HEAD', cache: 'no-store' }).then(function(r){
       var tag = r.headers.get('etag') || r.headers.get('last-modified');
       if (!tag) return;
       var prev = sessionStorage.getItem('jwBoardTag');
-      if (prev && prev !== tag) { location.reload(); return; }
       sessionStorage.setItem('jwBoardTag', tag);
+      // one attempt per version, ever — a misbehaving cache can delay an update but never loop it
+      if (prev && prev !== tag && sessionStorage.getItem('jwReloadedFor') !== tag) {
+        sessionStorage.setItem('jwReloadedFor', tag);
+        freshReload();
+      }
     }).catch(function(){});
   }
   check();
@@ -1982,7 +1991,7 @@ window.addEventListener('resize', function() {
       ptr.classList.add('spin');
       ptr.style.transition = '';
       ptr.style.transform = 'translate(-50%,8px)';
-      setTimeout(function(){ location.reload(); }, 350);
+      setTimeout(freshReload, 350);   // a pull means "give me the LATEST" — never the cached copy
     } else resetPull();
     engaged = false; dist = 0;
   }
