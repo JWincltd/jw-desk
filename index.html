@@ -356,6 +356,13 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-pmeta .mk{color:var(--fg-mute);text-transform:uppercase;letter-spacing:.07em;font-size:8.5px;margin-right:4px}
 .hcm-pmeta b{color:var(--fg);font-weight:500}
 .hcm-feedoff{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--fg-mute);line-height:1.5;padding:3px 0 5px;font-style:italic}
+.hcm-exit-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:3px}
+.hcm-exit{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--fg-dim)}
+.hcm-exit b{color:var(--fg);font-weight:600}
+.hcm-exit .up{color:var(--positive)}.hcm-exit .dn{color:var(--danger)}
+.hcm-prob{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--fg-dim);background:var(--bg-3);border:1px solid var(--line);border-radius:6px;padding:2px 8px;white-space:nowrap}
+.hcm-prob b{color:var(--fg);font-weight:600}
+.hcm-prob .mk{color:var(--fg-mute);text-transform:uppercase;letter-spacing:.06em;font-size:8px;margin-left:2px}
 .hcm-plevel-row{display:flex;align-items:center;gap:8px;margin-bottom:0}
 .hcm-info{display:inline-flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-mute);border:1px solid var(--line);border-radius:6px;padding:4px 9px;cursor:pointer;background:none;margin-left:auto;transition:color .15s var(--ease),border-color .15s var(--ease);user-select:none;flex:none}
 .hcm-info:hover{color:var(--fg-dim);border-color:var(--line-2)}
@@ -1129,8 +1136,14 @@ function renderHCM() {
       (p.expiry ? '<span><span class="mk">expiry</span><b>' + escc(p.expiry) + '</b></span>' : '') +
       (p.premium ? '<span><span class="mk">premium</span><b>' + escc(p.premium) + '</b></span>' : '') +
       '</div>' : '';
-    // detail pills: real IV / delta / open interest when the chain was live, plus the trigger
+    // exit row: the S/R profit target + historical odds of getting there (from the stock's bars)
+    var exitRow = p.exit ? '<div class="hcm-exit-row"><span class="hcm-exit">Exit → <b>' + escc(p.exit) + '</b>' +
+      (p.exitPct ? ' <span class="' + (String(p.exitPct).charAt(0) === '-' ? 'dn' : 'up') + '">' + escc(p.exitPct) + '</span>' : '') + '</span>' +
+      (p.hitProb ? '<span class="hcm-prob"><b>' + escc(p.hitProb) + '</b> <span class="mk">odds</span></span>' : '') + '</div>' : '';
+    // detail pills: exit + odds basis, then real IV / delta / open interest when the chain was live
     var pills = [];
+    if (p.exitBasis) pills.push(['Exit', 'target = ' + escc(p.exitBasis)]);
+    if (p.hitBasis) pills.push(['Odds', escc(p.hitBasis)]);
     if (p.iv) pills.push(['IV', escc(p.iv)]);
     if (p.live && p.delta) pills.push(['Delta', escc(p.delta)]);
     if (p.live && p.openInterest != null) pills.push(['Open int', Number(p.openInterest).toLocaleString('en-US')]);
@@ -1141,6 +1154,7 @@ function renderHCM() {
       '<div class="hcm-pname">' + escc(p.name) + '</div>' +
       meta +
       '<div class="hcm-plevel-row"><span class="hcm-plevel">Key level → ' + escc(p.keyLevel) + '</span><button class="hcm-info">▸ Details</button></div>' +
+      exitRow +
       '<div class="hcm-pdetail">' + pillHTML + '</div>' +
       '</div>';
   };
