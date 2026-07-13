@@ -160,10 +160,63 @@
   .anatomy .v{color:var(--ink)}
   .anatomy .g{color:var(--green)} .anatomy .a{color:var(--amber)} .anatomy .r{color:var(--red)}
 
+  /* at-a-glance scoreboard */
+  .scoreboard{margin-top:26px;border:1px solid var(--line);border-radius:14px;background:var(--panel);
+    box-shadow:var(--shadow);overflow:hidden}
+  .score-tiles{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
+  .tile{padding:14px 18px 12px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+  .tile:last-child{border-right:none}
+  .tile .tv{font-family:var(--serif);font-size:clamp(22px,3.4vw,30px);font-weight:600;line-height:1.05;
+    color:var(--ink);font-variant-numeric:tabular-nums}
+  .tile .tl{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-mute)}
+  .score-line{display:flex;flex-wrap:wrap;gap:4px 22px;padding:11px 18px;background:var(--panel-2);
+    font-family:var(--mono);font-size:11.5px;color:var(--ink-dim);font-variant-numeric:tabular-nums}
+  .score-line b{color:var(--amber);font-weight:600}
+  @media(max-width:640px){.score-tiles{grid-template-columns:1fr 1fr}
+    .tile:nth-child(2){border-right:none}.tile:nth-child(-n+2){border-bottom:1px solid var(--line)}}
+
+  /* sticky section nav */
+  section{scroll-margin-top:64px}
+  .secnav{position:sticky;top:0;z-index:20;margin:0 -24px;padding:10px 24px;
+    background:color-mix(in srgb,var(--paper) 86%,transparent);
+    backdrop-filter:blur(10px) saturate(1.3);-webkit-backdrop-filter:blur(10px) saturate(1.3);
+    border-bottom:1px solid var(--line)}
+  .secnav ul{list-style:none;margin:0;padding:0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+  .secnav ul::-webkit-scrollbar{display:none}
+  .secnav a{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;
+    text-decoration:none;color:var(--ink-mute);padding:5px 10px;border-radius:6px;border:1px solid transparent;
+    white-space:nowrap;display:flex;gap:6px;align-items:baseline;transition:color .2s ease,background .2s ease}
+  .secnav a .i{color:var(--amber)}
+  .secnav a:hover{color:var(--ink);background:var(--panel)}
+  .secnav a.on{color:var(--amber);background:var(--amber-soft);
+    border-color:color-mix(in srgb,var(--amber) 30%,transparent)}
+  @media print{.secnav{display:none}}
+
+  /* week-at-a-glance grid */
+  .weekwrap{overflow-x:auto;margin:8px 0 12px}
+  .week{display:grid;grid-template-columns:repeat(7,minmax(96px,1fr));gap:8px;min-width:730px}
+  .day{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 10px 12px;
+    display:flex;flex-direction:column;gap:6px}
+  .day.wknd{background:var(--amber-soft);border-color:color-mix(in srgb,var(--amber) 26%,transparent)}
+  .day .dh{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.11em;
+    text-transform:uppercase;color:var(--ink-mute)}
+  .day.wknd .dh{color:var(--amber)}
+  .job{font-size:12.5px;line-height:1.4;background:var(--panel-2);border-radius:7px;padding:5px 8px;color:var(--ink-dim)}
+  .day.wknd .job{background:var(--panel)}
+  .job .t{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink-mute);display:block}
+  .weeknote{display:flex;flex-wrap:wrap;gap:4px 20px;font-family:var(--mono);font-size:11px;
+    color:var(--ink-dim);margin:0 0 18px}
+  .weeknote b{color:var(--amber)}
+
   @media (prefers-reduced-motion:no-preference){
     .card,ol.dec li{transition:border-color .2s ease,transform .2s ease}
+    .reveal{opacity:0;transform:translateY(12px);transition:opacity .5s ease,transform .5s cubic-bezier(0.23,1,0.32,1)}
+    .reveal.in{opacity:1;transform:none}
   }
 </style>
+</head>
+<body>
 
 <div class="wrap">
 
@@ -192,7 +245,37 @@
       <span class="pill dormant">Plumbed · dormant</span>
       <span class="pill talk">Decision needed</span>
     </div>
+
+    <div class="scoreboard" aria-label="The desk at a glance">
+      <div class="score-tiles">
+        <div class="tile"><span class="tv">35</span><span class="tl">Live modules</span></div>
+        <div class="tile"><span class="tv">109</span><span class="tl">Tests, green</span></div>
+        <div class="tile"><span class="tv">13</span><span class="tl">Automated jobs</span></div>
+        <div class="tile"><span class="tv">4</span><span class="tl">Decisions open</span></div>
+      </div>
+      <div class="score-line">
+        <span><b>8</b> upgrades live this cycle</span>
+        <span><b>1</b> pending options data</span>
+        <span><b>1</b> dormant by design</span>
+        <span><b>4</b> bugs found &amp; fixed</span>
+        <span><b>~2,400</b> lines removed</span>
+        <span><b>47</b> macro dates loaded</span>
+      </div>
+    </div>
   </header>
+
+  <nav class="secnav" aria-label="Sections">
+    <ul>
+      <li><a href="#what"><span class="i">01</span>Pipeline</a></li>
+      <li><a href="#board"><span class="i">02</span>The board</a></li>
+      <li><a href="#built"><span class="i">03</span>This cycle</a></li>
+      <li><a href="#honest"><span class="i">04</span>Honesty</a></li>
+      <li><a href="#cadence"><span class="i">05</span>Cadence</a></li>
+      <li><a href="#blind"><span class="i">06</span>Blind spots</a></li>
+      <li><a href="#gap"><span class="i">07</span>Pod lens</a></li>
+      <li><a href="#decisions"><span class="i">08</span>Decisions</a></li>
+    </ul>
+  </nav>
 
   <!-- 1 · What it does -->
   <section id="what">
@@ -335,7 +418,40 @@
       <p class="eyebrow">What runs on its own, and when</p>
       <h2>The automated cadence</h2>
     </div></div>
-    <p class="col">Everything below runs unattended and files its own notification. Nothing needs a person to remember it.</p>
+    <p class="col">Everything below runs unattended and files its own notification. Nothing needs a person to remember it. The week at a glance first — weekend columns shaded, because that's where the desk now does its homework.</p>
+
+    <div class="weekwrap" aria-label="Week at a glance">
+      <div class="week">
+        <div class="day"><span class="dh">Mon</span>
+          <span class="job"><span class="t">Pre-open</span>Morning brief + tripwire</span>
+          <span class="job"><span class="t">Daily</span>Thesis desk + scout</span></div>
+        <div class="day"><span class="dh">Tue</span>
+          <span class="job"><span class="t">Pre-open</span>Morning brief + tripwire</span>
+          <span class="job"><span class="t">Daily</span>Thesis desk</span></div>
+        <div class="day"><span class="dh">Wed</span>
+          <span class="job"><span class="t">Pre-open</span>Morning brief + tripwire</span>
+          <span class="job"><span class="t">Daily</span>Thesis desk</span></div>
+        <div class="day"><span class="dh">Thu</span>
+          <span class="job"><span class="t">Pre-open</span>Morning brief + tripwire</span>
+          <span class="job"><span class="t">Daily</span>Thesis desk</span></div>
+        <div class="day"><span class="dh">Fri</span>
+          <span class="job"><span class="t">Pre-open</span>Morning brief + tripwire</span>
+          <span class="job"><span class="t">Daily</span>Thesis desk</span>
+          <span class="job"><span class="t">Week close</span>Desk review + report</span></div>
+        <div class="day wknd"><span class="dh">Sat</span>
+          <span class="job"><span class="t">Calibration</span>Weekend backtest</span>
+          <span class="job"><span class="t">Data</span>Macro calendar refresh</span>
+          <span class="job"><span class="t">Week ahead</span>Pre-brief</span></div>
+        <div class="day wknd"><span class="dh">Sun</span>
+          <span class="job"><span class="t">Positions</span>Deep-read</span>
+          <span class="job"><span class="t">Book</span>Portfolio risk</span>
+          <span class="job"><span class="t">Gap risk</span>News watch</span></div>
+      </div>
+    </div>
+    <p class="weeknote"><span><b>Monthly</b> Short-strategy lab</span>
+      <span><b>Bi-weekly</b> Deep-break short trial</span>
+      <span><b>Boundaries</b> Month / quarter / year desk reports</span></p>
+
     <div class="tbl-wrap">
       <table>
         <thead><tr><th>Job</th><th>When</th><th>What it produces</th></tr></thead>
@@ -434,5 +550,38 @@
 
 </div>
 
+<script>
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.secnav a'));
+  var byId = {};
+  links.forEach(function(a){ byId[a.getAttribute('href').slice(1)] = a; });
+
+  function setActive(id){
+    links.forEach(function(a){ a.classList.remove('on'); });
+    if (byId[id]) byId[id].classList.add('on');
+  }
+
+  var sections = Array.prototype.slice.call(document.querySelectorAll('section[id]'));
+
+  if ('IntersectionObserver' in window){
+    var spy = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting) setActive(e.target.id);
+      });
+    }, { rootMargin: '-15% 0px -70% 0px' });
+    sections.forEach(function(s){ spy.observe(s); });
+
+    var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduced){
+      var reveal = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if (e.isIntersecting){ e.target.classList.add('in'); reveal.unobserve(e.target); }
+        });
+      }, { rootMargin: '0px 0px -8% 0px' });
+      sections.forEach(function(s){ s.classList.add('reveal'); reveal.observe(s); });
+    }
+  }
+})();
+</script>
 </body>
 </html>
