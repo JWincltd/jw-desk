@@ -502,8 +502,66 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 #thComposeDock.open .chat-fab{display:none}
 @media(max-width:640px){.th-wrap{padding:6px 16px 120px}#thComposeDock{right:14px;bottom:14px}}
 
+/* ===== reports — the periodic desk report (holds the nav slot the firm used to) ===== */
+#reports{position:fixed;inset:0;z-index:62;background:var(--bg);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .38s cubic-bezier(.4,0,.2,1)}
+#reports.shown{transform:none}
+#reports.shown ~ #chatDock{display:none}
+.rp-wrap{max-width:940px;width:100%;margin:0 auto;padding:0 20px 60px;flex:1}
+.rp-head{margin:22px 0 6px}
+.rp-head h1{font-size:26px;letter-spacing:-.02em;margin:0}
+.rp-sub{font-size:12.5px;color:var(--fg-dim);margin-top:5px;line-height:1.5}
+.rp-firmlink{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px solid var(--line);border-radius:14px;background:var(--bg-2);padding:14px 16px;margin:16px 0 8px;cursor:pointer;transition:border-color .15s var(--ease),background .15s var(--ease)}
+.rp-firmlink:hover{border-color:var(--line-2);background:var(--bg-3)}
+.rp-firmlink .ic{width:34px;height:34px;border-radius:9px;background:var(--bg);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:15px;flex:none}
+.rp-firmlink .t{flex:1}
+.rp-firmlink .t b{font-size:13px;font-weight:600;display:block}
+.rp-firmlink .t span{font-size:11.5px;color:var(--fg-dim)}
+.rp-firmlink .arr{color:var(--fg-mute);font-size:16px}
+.rp-filter{display:flex;gap:7px;flex-wrap:wrap;margin:16px 0 4px}
+.rp-fchip{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;border-radius:7px;border:1px solid var(--line);color:var(--fg-mute);background:none;cursor:pointer;transition:all .15s var(--ease)}
+.rp-fchip.on{color:var(--fg);border-color:var(--line-2);background:var(--bg-3)}
+.rp-list{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.rp-card{border:1px solid var(--line);border-radius:16px;background:var(--bg);padding:0;overflow:hidden}
+.rp-card.open{border-color:var(--line-2)}
+.rp-cardhead{display:flex;align-items:center;gap:12px;padding:16px 18px;cursor:pointer;user-select:none}
+.rp-per{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.09em;text-transform:uppercase;padding:3px 8px;border-radius:5px;border:1px solid var(--line-2);color:var(--fg-dim);white-space:nowrap;flex:none}
+.rp-per.week{color:var(--fg-dim)}.rp-per.month{color:var(--amber);border-color:rgba(176,122,46,.4)}.rp-per.quarter{color:#3F8E9B;border-color:rgba(63,142,155,.4)}.rp-per.year{color:var(--positive);border-color:rgba(74,135,98,.4)}
+.rp-ch-t{flex:1;min-width:0}
+.rp-ch-t .ttl{font-size:13.5px;font-weight:600;letter-spacing:-.01em}
+.rp-ch-t .meta{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--fg-mute);margin-top:3px;display:flex;gap:12px;flex-wrap:wrap}
+.rp-delta{font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:3px 8px;border-radius:6px;background:var(--bg-3);white-space:nowrap;flex:none}
+.rp-delta.up{color:var(--positive)}.rp-delta.dn{color:var(--danger)}
+.rp-toggle{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-mute);flex:none}
+.rp-body{display:none;padding:0 18px 18px;border-top:1px solid var(--line)}
+.rp-card.open .rp-body{display:block}
+.rp-sec{margin-top:18px}
+.rp-sec-h{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:600;letter-spacing:-.01em;margin-bottom:10px}
+.rp-sec-h .n{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--fg-mute);border:1px solid var(--line);border-radius:5px;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.rp-tbl{width:100%;border-collapse:collapse;font-size:11.5px;margin:6px 0}
+.rp-tbl th{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-mute);text-align:right;padding:5px 8px;border-bottom:1px solid var(--line);font-weight:500}
+.rp-tbl th:first-child{text-align:left}
+.rp-tbl td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--line);font-family:'IBM Plex Mono',monospace}
+.rp-tbl td:first-child{text-align:left;font-family:inherit}
+.rp-tbl tr:last-child td{border-bottom:none}
+.rp-tbl .up{color:var(--positive)}.rp-tbl .dn{color:var(--danger)}
+.rp-tbl tr.tot td{font-weight:600;border-top:1px solid var(--line-2)}
+.rp-call{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--fg-dim);line-height:1.5;padding:4px 0}
+.rp-call .mk{font-size:12px;flex:none;margin-top:1px}
+.rp-call b{color:var(--fg);font-weight:600}
+.rp-memo{background:var(--bg-2);border:1px solid var(--line);border-radius:11px;padding:12px 14px;font-size:12.5px;color:var(--fg-dim);line-height:1.6;margin-top:8px;white-space:pre-wrap}
+.rp-chip-row{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.rp-item{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--fg-dim);line-height:1.55;padding:7px 11px;background:var(--bg-3);border:1px solid var(--line);border-radius:9px;margin-top:6px}
+.rp-item .lab{font-size:9px;font-family:'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-mute);flex:none;margin-top:2px;min-width:52px}
+.rp-item.devil{border-color:rgba(168,68,44,.28)}
+.rp-item.devil .lab{color:var(--danger)}
+.rp-item b{color:var(--fg);font-weight:600}
+.rp-cont{font-size:12px;color:var(--fg-dim);line-height:1.55;margin-top:8px;padding:9px 12px;border-left:2px solid var(--line-2);background:var(--bg-2);border-radius:0 9px 9px 0}
+.rp-subh{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--fg-mute);margin:14px 0 4px}
+.rp-none{font-size:12px;color:var(--fg-mute);line-height:1.55;padding:6px 0}
+.rp-empty{border:1px dashed var(--line-2);border-radius:16px;padding:30px 22px;text-align:center;color:var(--fg-dim);font-size:13px;line-height:1.6;margin-top:20px}
+@media(max-width:560px){.rp-head h1{font-size:22px}.rp-cardhead{flex-wrap:wrap}.rp-toggle{display:none}}
 /* ===== the firm — org chart ===== */
-#org{position:fixed;inset:0;z-index:62;background:var(--bg);overflow:hidden;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .38s cubic-bezier(.4,0,.2,1)}
+#org{position:fixed;inset:0;z-index:63;background:var(--bg);overflow:hidden;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .38s cubic-bezier(.4,0,.2,1)}
 #org.shown{transform:none}
 #org.shown ~ #chatDock{display:none}
 .org-wrap{flex:1;min-height:0;display:flex;flex-direction:column;padding:6px 24px 28px;max-width:1280px;width:100%;margin:0 auto;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none}
@@ -618,7 +676,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <span class="nav-sep">→</span>
       <button class="page-step" onclick="openThesis()">Thesis scout</button>
       <span class="nav-sep">→</span>
-      <button class="page-step" onclick="goToOrg()">The firm</button>
+      <button class="page-step" onclick="openReports()">Reports</button>
     </div>
     <div class="hm-top">
       <h1>Good morning, JW.</h1>
@@ -646,7 +704,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     <span class="nav-sep">→</span>
     <button class="page-step" onclick="openThesis()">Thesis scout</button>
     <span class="nav-sep">→</span>
-    <button class="page-step" onclick="goToOrg()">The firm</button>
+    <button class="page-step" onclick="openReports()">Reports</button>
   </div>
   <div class="cHead">
     <div class="brandbar">
@@ -695,11 +753,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <div class="when"><span id="oClock">--:--:-- ET</span><div class="d" id="oDt"></div></div>
     </div>
     <div class="page-nav" id="orgNav">
-      <button class="page-step" onclick="closeOrgToBrief()">Your book</button>
-      <span class="nav-sep">→</span>
       <button class="page-step" onclick="closeOrgToBoard()">Market report</button>
       <span class="nav-sep">→</span>
       <button class="page-step" onclick="closeOrgToThesis()">Thesis scout</button>
+      <span class="nav-sep">→</span>
+      <button class="page-step" onclick="closeOrgToReports()">Reports</button>
       <span class="nav-sep">→</span>
       <button class="page-step on">The firm</button>
     </div>
@@ -738,7 +796,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <span class="nav-sep">→</span>
       <button class="page-step on">Thesis scout</button>
       <span class="nav-sep">→</span>
-      <button class="page-step" onclick="goToOrg()">The firm</button>
+      <button class="page-step" onclick="openReports()">Reports</button>
     </div>
     <div class="th-head">
       <h1>Thesis scout.</h1>
@@ -757,6 +815,37 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <div class="chat-input"><textarea id="thComposeTa" rows="3" placeholder="Paste an article, a link, or your own idea…"></textarea><button class="chat-send" id="thComposeSend">↑</button></div>
     </div>
   </div>
+</div>
+
+<!-- ===== reports — periodic desk report (weekly / monthly / quarterly / annual) ===== -->
+<div id="reports">
+  <div class="rp-wrap">
+    <div class="brandbar">
+      <div class="brand"><span class="seal">JW</span><span class="wm">JW Private Wealth</span></div>
+      <div class="when"><span id="rpClock">--:--:-- ET</span><div class="d" id="rpDt"></div></div>
+    </div>
+    <div class="page-nav" id="reportsNav">
+      <button class="page-step" onclick="closeReportsToBrief()">Your book</button>
+      <span class="nav-sep">→</span>
+      <button class="page-step" onclick="closeReportsToBoard()">Market report</button>
+      <span class="nav-sep">→</span>
+      <button class="page-step" onclick="closeReportsToThesis()">Thesis scout</button>
+      <span class="nav-sep">→</span>
+      <button class="page-step on">Reports</button>
+    </div>
+    <div class="rp-head">
+      <h1>Reports.</h1>
+      <div class="rp-sub" id="rpSub">The desk's periodic report — the market half (are we making money) and the system half (is the machine getting sharper), tied together and to the report before it.</div>
+    </div>
+    <button class="rp-firmlink" onclick="goToOrg()">
+      <span class="ic">🏛</span>
+      <span class="t"><b>The firm</b><span>Org chart, standing roster &amp; per-agent leaderboard</span></span>
+      <span class="arr">→</span>
+    </button>
+    <div class="rp-filter" id="rpFilter"></div>
+    <div class="rp-list" id="rpList"></div>
+  </div>
+  <div class="bscrim" id="rpScrim"></div>
 </div>
 
 <!-- ===== Ask the desk ===== -->
@@ -810,6 +899,8 @@ function briefClock() {
   if ($('oDt')) $('oDt').textContent = ds;
   if ($('thClock')) $('thClock').textContent = ts;
   if ($('thDt')) $('thDt').textContent = ds;
+  if ($('rpClock')) $('rpClock').textContent = ts;
+  if ($('rpDt')) $('rpDt').textContent = ds;
 }
 function renderBriefing() {
   if (!B.portfolio) { enterBoard(true); return; }
@@ -1665,12 +1756,15 @@ function goToOrg(){
   $('brief').classList.add('gone');
   if (!boardInitialized) { boardInitialized = true; initBoard(); }
   if (!orgInitialized) renderOrg();
+  renderReports();
+  $('reports').classList.add('shown');   // the firm now lives under Reports — keep it beneath
   $('org').classList.add('shown');
   sessionStorage.setItem('jwPage', 'org');
 }
-function closeOrgToBoard(){ $('org').classList.remove('shown'); $('thesis').classList.remove('shown'); orgDetailClose(); sessionStorage.setItem('jwPage', 'board'); }
-function closeOrgToBrief(){ $('org').classList.remove('shown'); $('thesis').classList.remove('shown'); orgDetailClose(); $('brief').classList.remove('gone'); window.scrollTo(0, 0); sessionStorage.setItem('jwPage', 'brief'); }
-function closeOrgToThesis(){ $('org').classList.remove('shown'); orgDetailClose(); openThesis(); }
+function closeOrgToBoard(){ $('org').classList.remove('shown'); $('reports').classList.remove('shown'); $('thesis').classList.remove('shown'); orgDetailClose(); sessionStorage.setItem('jwPage', 'board'); }
+function closeOrgToBrief(){ $('org').classList.remove('shown'); $('reports').classList.remove('shown'); $('thesis').classList.remove('shown'); orgDetailClose(); $('brief').classList.remove('gone'); window.scrollTo(0, 0); sessionStorage.setItem('jwPage', 'brief'); }
+function closeOrgToThesis(){ $('org').classList.remove('shown'); $('reports').classList.remove('shown'); orgDetailClose(); openThesis(); }
+function closeOrgToReports(){ $('org').classList.remove('shown'); orgDetailClose(); sessionStorage.setItem('jwPage', 'reports'); }
 $('orgScrim').addEventListener('click', orgDetailClose);
 (function(){
   var tx = null, ty = null, sw = false, el = $('org');
@@ -1690,7 +1784,133 @@ function openThesis(){
 }
 function closeThesisToBoard(){ $('thesis').classList.remove('shown'); sessionStorage.setItem('jwPage', 'board'); }
 function closeThesisToBrief(){ $('thesis').classList.remove('shown'); $('brief').classList.remove('gone'); window.scrollTo(0, 0); sessionStorage.setItem('jwPage', 'brief'); }
-// swipe: right → back to the report, left → on to the firm
+
+/* ---------- reports page navigation ---------- */
+function openReports(){
+  $('brief').classList.add('gone');
+  if (!boardInitialized) { boardInitialized = true; initBoard(); }
+  renderReports();
+  $('org').classList.remove('shown');
+  $('thesis').classList.remove('shown');
+  $('reports').classList.add('shown');
+  window.scrollTo(0, 0);
+  sessionStorage.setItem('jwPage', 'reports');
+}
+function closeReportsToBoard(){ $('reports').classList.remove('shown'); $('thesis').classList.remove('shown'); sessionStorage.setItem('jwPage', 'board'); }
+function closeReportsToBrief(){ $('reports').classList.remove('shown'); $('thesis').classList.remove('shown'); $('brief').classList.remove('gone'); window.scrollTo(0, 0); sessionStorage.setItem('jwPage', 'brief'); }
+function closeReportsToThesis(){ $('reports').classList.remove('shown'); openThesis(); }
+// swipe on reports: right → back to thesis scout
+(function(){
+  var tx = null, ty = null, sw = false, el = $('reports');
+  el.addEventListener('touchstart', function(e){ tx = e.touches[0].clientX; ty = e.touches[0].clientY; sw = false; }, { passive: true });
+  el.addEventListener('touchmove', function(e){ if (tx === null) return; var dx = e.touches[0].clientX - tx, dy = e.touches[0].clientY - ty; if (!sw && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) sw = true; }, { passive: true });
+  el.addEventListener('touchend', function(e){ if (!sw || tx === null) { tx = null; sw = false; return; } var dx = e.changedTouches[0].clientX - tx; tx = null; sw = false; if (dx > 50) closeReportsToThesis(); });
+}());
+
+/* ---------- reports render ---------- */
+var rpFilter = 'all';
+var RP_LABEL = { week: 'Weekly', month: 'Monthly', quarter: 'Quarterly', year: 'Annual' };
+function rpHit(x){ return x == null ? '—' : Math.round(x * 100) + '%'; }
+function rpR(x){ return x == null ? '—' : (x >= 0 ? '+' : '') + x + 'R'; }
+function rpRclass(x){ return x == null ? '' : (x > 0 ? 'up' : x < 0 ? 'dn' : ''); }
+function rpStatRow(label, s, tot){
+  if (!s) return '';
+  return '<tr' + (tot ? ' class="tot"' : '') + '><td>' + escc(label) + '</td><td>' + (s.graded || 0) + '</td><td>' + (s.wins || 0) + 'W/' + (s.losses || 0) + 'L</td><td>' + rpHit(s.hitRate) + '</td><td class="' + rpRclass(s.totalR) + '">' + rpR(s.totalR) + '</td><td>' + (s.avgR == null ? '—' : s.avgR) + '</td></tr>';
+}
+function rpMarketSection(r){
+  var m = r.market || {}, tr = m.trackRecord || {}, bc = m.byCard || {};
+  var out = '<div class="rp-sec"><div class="rp-sec-h"><span class="n">1</span>Market report</div>';
+  // track record table
+  out += '<table class="rp-tbl"><thead><tr><th>Book</th><th>Graded</th><th>W/L</th><th>Hit</th><th>Total R</th><th>Avg R</th></tr></thead><tbody>' +
+    rpStatRow('Conviction buys', bc.buy) + rpStatRow('Breakout plays', bc.breakout) + rpStatRow('Breakdown plays', bc.breakdown) +
+    rpStatRow('All accepted', tr.window, true) + '</tbody></table>';
+  if (tr.allTime) out += '<div class="rp-subh">All-time (live ledger)</div><div class="rp-none">' + (tr.allTime.graded || 0) + ' graded · ' + rpHit(tr.allTime.hitRate) + ' hit · <span class="' + rpRclass(tr.allTime.totalR) + '">' + rpR(tr.allTime.totalR) + '</span> total · ' + (tr.allTime.open || 0) + ' open' + (tr.allTime.calibrating ? ' · still calibrating' : '') + '</div>';
+  // accurate vs wrong
+  out += '<div class="rp-subh">Where we were accurate vs wrong</div>';
+  var calls = '';
+  (m.accurate || []).forEach(function(p){ calls += '<div class="rp-call"><span class="mk">✅</span><span><b>' + escc(p.symbol) + '</b> (' + escc(p.type) + ') <span class="' + rpRclass(p.R) + '">' + rpR(p.R) + '</span> — ' + escc(p.why || 'no note') + '</span></div>'; });
+  (m.wrong || []).forEach(function(p){ calls += '<div class="rp-call"><span class="mk">❌</span><span><b>' + escc(p.symbol) + '</b> (' + escc(p.type) + ') <span class="' + rpRclass(p.R) + '">' + rpR(p.R) + '</span> — ' + escc(p.why || 'no note') + '</span></div>'; });
+  out += calls || '<div class="rp-none">No graded calls resolved in this window yet.</div>';
+  // firm vs benchmarks
+  if ((m.vsBenchmarks || []).length){
+    out += '<div class="rp-subh">Firm vs benchmarks (60d)</div><table class="rp-tbl"><thead><tr><th>Benchmark</th><th>Bench avg</th><th>Bench hit</th><th>Firm avg</th><th>Firm hit</th></tr></thead><tbody>' +
+      m.vsBenchmarks.map(function(b){ return '<tr><td>' + escc((b.benchmark || '').replace('bench-', '')) + '</td><td>' + b.benchAvgPts + '</td><td>' + rpHit(b.benchHitRate) + '</td><td>' + b.firmAvgPts + '</td><td>' + rpHit(b.firmHitRate) + '</td></tr>'; }).join('') + '</tbody></table>';
+  }
+  // thesis
+  if (m.theses) out += '<div class="rp-subh">Thesis desk</div><div class="rp-none">' + (m.theses.open || 0) + ' open · ' + (m.theses.closed || 0) + ' closed' + ((m.theses.top || []).length ? '. Top: ' + m.theses.top.map(function(t){ return '#' + t.issue + ' ' + escc(t.title) + ' (' + escc(t.band) + ')'; }).join('; ') : '.') + '</div>';
+  // continuity
+  var c = m.continuity;
+  if (c){
+    if (c.hasPrev) out += '<div class="rp-cont"><b>Continuity vs ' + escc(r.period) + ' ending ' + escc(c.prevEnd) + ':</b> total R ' + (c.deltaTotalR == null ? '—' : (c.deltaTotalR >= 0 ? '+' : '') + c.deltaTotalR + 'R') + ', ' + (c.deltaGraded >= 0 ? '+' : '') + (c.deltaGraded || 0) + ' graded plays, hit ' + rpHit(c.prevHitRate) + ' → ' + rpHit(c.hitRate) + '.</div>';
+    else out += '<div class="rp-cont">' + escc(c.note || 'First report of this cadence.') + '</div>';
+  }
+  // memo
+  if (m.memo) out += '<div class="rp-subh">Market read</div><div class="rp-memo">' + escc(m.memo) + '</div>';
+  return out + '</div>';
+}
+function rpSystemSection(r){
+  var s = r.system || {};
+  var out = '<div class="rp-sec"><div class="rp-sec-h"><span class="n">2</span>System review</div>';
+  if (s.changelog) out += '<div class="rp-none">' + escc(s.changelog) + '</div>';
+  if ((s.features || []).length){ out += '<div class="rp-subh">Shipped — features</div>'; s.features.forEach(function(f){ out += '<div class="rp-call"><span class="mk">›</span><span>' + escc(f) + '</span></div>'; }); }
+  if ((s.fixes || []).length){ out += '<div class="rp-subh">Fixes</div>'; s.fixes.forEach(function(f){ out += '<div class="rp-call"><span class="mk">›</span><span>' + escc(f) + '</span></div>'; }); }
+  if (s.dataRuns) out += '<div class="rp-none">' + s.dataRuns + ' routine automated data-run commit' + (s.dataRuns === 1 ? '' : 's') + ' (excluded above).</div>';
+  out += '<div class="rp-subh">Audit — improvements to add</div>';
+  if ((s.improvements || []).length) s.improvements.forEach(function(i){ out += '<div class="rp-item"><span class="lab">Add</span><span><b>' + escc(i.what) + '</b>' + (i.effort ? ' (' + escc(i.effort) + ' effort)' : '') + (i.why ? ' — ' + escc(i.why) : '') + '</span></div>'; });
+  else out += '<div class="rp-none">Auditor flagged nothing high-value this period.</div>';
+  out += '<div class="rp-subh">Audit — redundancies &amp; inefficiencies</div>';
+  if ((s.inefficiencies || []).length) s.inefficiencies.forEach(function(i){ out += '<div class="rp-item"><span class="lab">Trim</span><span><b>' + escc(i.what) + '</b>' + (i.fix ? ' → ' + escc(i.fix) : '') + '</span></div>'; });
+  else out += '<div class="rp-none">Nothing flagged as dead weight this period.</div>';
+  out += '<div class="rp-subh">Devil’s advocate — the case against our direction</div>';
+  if ((s.devilsAdvocate || []).length) s.devilsAdvocate.forEach(function(d){ out += '<div class="rp-item devil"><span class="lab">Counter</span><span>' + escc(d) + '</span></div>'; });
+  else out += '<div class="rp-none">No strong objection surfaced — treat that skeptically, not as validation.</div>';
+  return out + '</div>';
+}
+function renderReports(){
+  var host = $('rpList'); if (!host) return;
+  var all = Array.isArray(B.reports) ? B.reports.slice() : [];
+  // filter chips (only for periods that exist)
+  var present = {}; all.forEach(function(r){ present[r.period] = true; });
+  var chips = [['all', 'All']].concat(['week','month','quarter','year'].filter(function(p){ return present[p]; }).map(function(p){ return [p, RP_LABEL[p]]; }));
+  $('rpFilter').innerHTML = chips.length > 1 ? chips.map(function(c){ return '<button class="rp-fchip' + (rpFilter === c[0] ? ' on' : '') + '" data-f="' + c[0] + '">' + c[1] + '</button>'; }).join('') : '';
+  $('rpFilter').querySelectorAll('.rp-fchip').forEach(function(b){ b.onclick = function(){ rpFilter = this.getAttribute('data-f'); renderReports(); }; });
+
+  var list = rpFilter === 'all' ? all : all.filter(function(r){ return r.period === rpFilter; });
+  $('rpSub').textContent = all.length
+    ? all.length + ' report' + (all.length === 1 ? '' : 's') + ' on file — newest first. Each report ties to the one before it so you can see the trend, not just the snapshot.'
+    : 'The desk’s periodic report — market performance and a system audit, tied together and to the report before it.';
+  if (!list.length){
+    host.innerHTML = '<div class="rp-empty">No reports yet.<br>The first <b>weekly</b> report files automatically this Friday after the desk review; monthly, quarterly, and annual reports roll up as those periods close. They’ll appear here newest-first.</div>';
+    return;
+  }
+  host.innerHTML = list.map(function(r, i){
+    var m = r.market || {}, tr = (m.trackRecord || {}).window || {}, c = m.continuity || {};
+    var range = escc(r.cutoff) + ' → ' + escc(r.end);
+    var recLine = (tr.graded || 0) + ' graded · ' + rpHit(tr.hitRate) + ' hit · ' + rpR(tr.totalR);
+    var sysLine = (r.system && (r.system.features || []).length ? (r.system.features.length + ' shipped') : 'no new features') + ((r.system && r.system.devilsAdvocate || []).length ? ' · ' + r.system.devilsAdvocate.length + ' challenge' + (r.system.devilsAdvocate.length === 1 ? '' : 's') : '');
+    var delta = '';
+    if (c.hasPrev && c.deltaTotalR != null) delta = '<span class="rp-delta ' + rpRclass(c.deltaTotalR) + '">' + (c.deltaTotalR >= 0 ? '+' : '') + c.deltaTotalR + 'R vs last</span>';
+    var openCls = i === 0 ? ' open' : '';
+    return '<div class="rp-card' + openCls + '" data-id="' + escc(r.id) + '">' +
+      '<div class="rp-cardhead">' +
+        '<span class="rp-per ' + escc(r.period) + '">' + (RP_LABEL[r.period] || r.period) + '</span>' +
+        '<span class="rp-ch-t"><span class="ttl">' + (RP_LABEL[r.period] || r.period) + ' report — ' + escc(r.end) + '</span><span class="meta"><span>' + range + '</span><span>' + recLine + '</span><span>' + sysLine + '</span></span></span>' +
+        delta +
+        '<span class="rp-toggle">' + (i === 0 ? '▾' : '▸') + '</span>' +
+      '</div>' +
+      '<div class="rp-body">' + rpMarketSection(r) + rpSystemSection(r) + '</div>' +
+    '</div>';
+  }).join('');
+  host.querySelectorAll('.rp-cardhead').forEach(function(head){
+    head.onclick = function(){
+      var card = this.closest('.rp-card');
+      var open = card.classList.toggle('open');
+      var tg = card.querySelector('.rp-toggle'); if (tg) tg.textContent = open ? '▾' : '▸';
+    };
+  });
+}
+$('rpScrim') && $('rpScrim').addEventListener('click', function(){ $('rpScrim').classList.remove('on'); });
+// swipe: right → back to the report, left → on to reports
 (function(){
   var tx = null, ty = null, sw = false, el = $('thesis');
   el.addEventListener('touchstart', function(e){
@@ -1702,7 +1922,7 @@ function closeThesisToBrief(){ $('thesis').classList.remove('shown'); $('brief')
     if (!sw || tx === null) { tx = null; sw = false; return; }
     var dx = e.changedTouches[0].clientX - tx; tx = null; sw = false;
     if (dx > 50) closeThesisToBoard();
-    else if (dx < -50) goToOrg();
+    else if (dx < -50) openReports();
   });
 }());
 // "Add a new thesis" composer — files DIRECTLY into the GitHub-issue intake via the API.
@@ -1836,7 +2056,14 @@ if (_jwPage === 'board') enterBoard(true);
 else if (_jwPage === 'org') {
   enterBoard(true);
   if (!orgInitialized) renderOrg();
+  renderReports();
+  var _rp0 = $('reports'); _rp0.style.transition = 'none'; _rp0.classList.add('shown'); _rp0.offsetHeight; _rp0.style.transition = '';   // firm sits over reports
   var _o = $('org'); _o.style.transition = 'none'; _o.classList.add('shown'); _o.offsetHeight; _o.style.transition = '';
+}
+else if (_jwPage === 'reports') {
+  enterBoard(true);
+  renderReports();
+  var _rp = $('reports'); _rp.style.transition = 'none'; _rp.classList.add('shown'); _rp.offsetHeight; _rp.style.transition = '';
 }
 else if (_jwPage === 'thesis') {
   enterBoard(true);
