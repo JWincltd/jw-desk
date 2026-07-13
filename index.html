@@ -352,6 +352,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-popt{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--amber);background:rgba(176,122,46,.08);padding:3px 7px;border-radius:5px;white-space:nowrap}
 .hcm-pname{display:none}
 .hcm-plevel{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--fg-dim);margin-bottom:3px}
+.hcm-pmeta{display:flex;flex-wrap:wrap;gap:4px 14px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--fg-dim);margin:6px 0 5px}
+.hcm-pmeta .mk{color:var(--fg-mute);text-transform:uppercase;letter-spacing:.07em;font-size:8.5px;margin-right:4px}
+.hcm-pmeta b{color:var(--fg);font-weight:500}
 .hcm-plevel-row{display:flex;align-items:center;gap:8px;margin-bottom:0}
 .hcm-info{display:inline-flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-mute);border:1px solid var(--line);border-radius:6px;padding:4px 9px;cursor:pointer;background:none;margin-left:auto;transition:color .15s var(--ease),border-color .15s var(--ease);user-select:none;flex:none}
 .hcm-info:hover{color:var(--fg-dim);border-color:var(--line-2)}
@@ -740,7 +743,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   </div>
   <div class="foot">
     <div class="top"><span class="lab">Wed, Jun 17, 2026, 05:22 PM ET</span><button class="redo" onclick="location.reload()">↺ replay briefing</button></div>
-    <p class="disclaimer"><b style="color:var(--fg-dim)">Internal research note — not investment advice.</b> A coverage-universe scan narrowed to overnight movers, one analyst agent per surviving name, synthesized by a CIO pass. Sparklines and the ticker are illustrative (no intraday tick data on this feed). Conviction bands are ordinal and uncalibrated; no probabilities, no position sizing. Options plays are structural expressions of the desk&#8217;s directional calls — implied volatility is not sourced from live options data.</p>
+    <p class="disclaimer"><b style="color:var(--fg-dim)">Internal research note — not investment advice.</b> A coverage-universe scan narrowed to overnight movers, one analyst agent per surviving name, synthesized by a CIO pass. Sparklines and the ticker are illustrative (no intraday tick data on this feed). Conviction bands are ordinal and uncalibrated; no probabilities, no position sizing. Options plays express the desk&#8217;s directional calls; the strike, expiry, premium and implied volatility are pulled from the live options chain as of the pre-open snapshot (premiums are indicative, not executable quotes). When the options feed is unavailable a card falls back to a structural note without contract detail.</p>
     <div class="prov" id="pProv"></div>
   </div>
 </div>
@@ -1119,12 +1122,27 @@ function renderHCM() {
     recLine('buy') +
     emptyNote(hcm.note || 'No conviction picks this morning — nothing cleared the desk.') +
     '</div>';
-  const playHTML = (p) => '<div class="hcm-play">' +
-    '<div class="hcm-play-top">' + tlogo(p.symbol, 20) + '<span class="hcm-psym">' + p.symbol + '</span><span class="hcm-popt">' + escc(p.play) + '</span><span class="hcm-pchg ' + cls(p.changePct) + '">' + pct(p.changePct) + '</span></div>' +
-    '<div class="hcm-pname">' + escc(p.name) + '</div>' +
-    '<div class="hcm-plevel-row"><span class="hcm-plevel">Key level → ' + escc(p.keyLevel) + '</span><button class="hcm-info">▸ Details</button></div>' +
-    '<div class="hcm-pdetail"><div class="hcm-ppill"><span class="pp-lab">IV</span><span>' + escc(p.iv) + '</span></div><div class="hcm-ppill"><span class="pp-lab">Confirms</span><span>' + escc(p.confirms) + '</span></div></div>' +
-    '</div>';
+  const playHTML = (p) => {
+    // live options sub-line: the real contract you'd buy — expiry date + current premium range
+    var meta = (p.live && (p.expiry || p.premium)) ? '<div class="hcm-pmeta">' +
+      (p.expiry ? '<span><span class="mk">expiry</span><b>' + escc(p.expiry) + '</b></span>' : '') +
+      (p.premium ? '<span><span class="mk">premium</span><b>' + escc(p.premium) + '</b></span>' : '') +
+      '</div>' : '';
+    // detail pills: real IV / delta / open interest when the chain was live, plus the trigger
+    var pills = [];
+    if (p.iv) pills.push(['IV', escc(p.iv)]);
+    if (p.live && p.delta) pills.push(['Delta', escc(p.delta)]);
+    if (p.live && p.openInterest != null) pills.push(['Open int', Number(p.openInterest).toLocaleString('en-US')]);
+    if (p.confirms) pills.push(['Confirms', escc(p.confirms)]);
+    var pillHTML = pills.map(function(x) { return '<div class="hcm-ppill"><span class="pp-lab">' + x[0] + '</span><span>' + x[1] + '</span></div>'; }).join('');
+    return '<div class="hcm-play">' +
+      '<div class="hcm-play-top">' + tlogo(p.symbol, 20) + '<span class="hcm-psym">' + p.symbol + '</span><span class="hcm-popt">' + escc(p.play) + '</span><span class="hcm-pchg ' + cls(p.changePct) + '">' + pct(p.changePct) + '</span></div>' +
+      '<div class="hcm-pname">' + escc(p.name) + '</div>' +
+      meta +
+      '<div class="hcm-plevel-row"><span class="hcm-plevel">Key level → ' + escc(p.keyLevel) + '</span><button class="hcm-info">▸ Details</button></div>' +
+      '<div class="hcm-pdetail">' + pillHTML + '</div>' +
+      '</div>';
+  };
   const bo = hcm.breakout || [], bd = hcm.breakdown || [];
   // empty sections carry the desk's specific reason when the pipeline provides one
   const sn = hcm.sectionNotes || {};
