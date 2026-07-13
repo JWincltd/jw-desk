@@ -297,6 +297,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 /* ===== thesis desk (structural ideas) ===== */
 .th-card{border:1px solid var(--line);border-radius:16px;background:var(--bg);padding:18px 20px}
 .th-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+/* standardized badge row: band (+scout) pinned left, Details pinned right — fixed regardless of title length */
+.th-badges{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px}
+.th-badges-l{display:flex;align-items:center;gap:6px;min-height:26px}
 .th-title{font-size:13.5px;font-weight:600;letter-spacing:-.01em}
 .th-chip{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:3px 7px;border-radius:5px;border:1px solid var(--line);color:var(--fg-mute);white-space:nowrap}
 .th-chip.b-strong{color:var(--positive);border-color:rgba(74,135,98,.4)}
@@ -1299,8 +1302,9 @@ function renderTheses() {
       t.watchNext ? ['Watch', t.watchNext] : null,
     ].filter(Boolean).map(function(x) { return '<div class="th-pill"><span class="pp-lab">' + x[0] + '</span><span>' + escc(x[1]) + '</span></div>'; }).join('');
     return '<div class="th-card">' +
-      '<div class="th-top"><span class="th-title">' + escc(t.title) + '</span>' + bandChip(t.band) +
-      (t.origin === 'scout' ? '<span class="th-chip scout">scout</span>' : '') +
+      '<div class="th-top"><span class="th-title">' + escc(t.title) + '</span></div>' +
+      '<div class="th-badges"><div class="th-badges-l">' + bandChip(t.band) +
+      (t.origin === 'scout' ? '<span class="th-chip scout">scout</span>' : '') + '</div>' +
       '<button class="hcm-info" data-th="' + i + '">▸ Details</button></div>' +
       (t.theme ? '<div class="th-meta" style="margin-top:2px"><span>theme — ' + escc(t.theme) + '</span></div>' : '') +
       '<div class="th-meta"><span>' + (t.basket || []).map(escc).join(' · ') + '</span>' + perf +
