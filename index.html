@@ -355,6 +355,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-pmeta{display:flex;flex-wrap:wrap;gap:4px 14px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--fg-dim);margin:6px 0 5px}
 .hcm-pmeta .mk{color:var(--fg-mute);text-transform:uppercase;letter-spacing:.07em;font-size:8.5px;margin-right:4px}
 .hcm-pmeta b{color:var(--fg);font-weight:500}
+.hcm-feedoff{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--fg-mute);line-height:1.5;padding:3px 0 5px;font-style:italic}
 .hcm-plevel-row{display:flex;align-items:center;gap:8px;margin-bottom:0}
 .hcm-info{display:inline-flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-mute);border:1px solid var(--line);border-radius:6px;padding:4px 9px;cursor:pointer;background:none;margin-left:auto;transition:color .15s var(--ease),border-color .15s var(--ease);user-select:none;flex:none}
 .hcm-info:hover{color:var(--fg-dim);border-color:var(--line-2)}
@@ -1146,13 +1147,17 @@ function renderHCM() {
   const bo = hcm.breakout || [], bd = hcm.breakdown || [];
   // empty sections carry the desk's specific reason when the pipeline provides one
   const sn = hcm.sectionNotes || {};
+  // when a section has plays but NONE carry live contract data, say so once — the cards show the
+  // directional trigger, the exact strike/expiry/premium wait on the options feed being connected
+  const feedNote = (arr) => (arr.length && !arr.some(function(p) { return p.live; }))
+    ? '<div class="hcm-feedoff">Contract detail (strike · expiry · premium) unavailable — options feed not connected. Showing the directional trigger only.</div>' : '';
   const boHTML = '<div class="hcm-card hcm-bo' + (bo.length ? '' : ' hcm-empty') + '">' +
     '<div class="hcm-hd"><span class="hcm-t">Breakout plays</span><span class="hcm-count">' + bo.length + (bo.length === 1 ? ' watch' : ' watches') + '</span></div>' +
-    recLine('breakout') +
+    recLine('breakout') + feedNote(bo) +
     (bo.length ? bo.map(playHTML).join('') : emptyNote(sn.breakout || 'No breakout setups this morning — nothing cleared the desk.')) + '</div>';
   const bdHTML = '<div class="hcm-card hcm-bd' + (bd.length ? '' : ' hcm-empty') + '">' +
     '<div class="hcm-hd"><span class="hcm-t">Breakdown plays</span><span class="hcm-count">' + bd.length + (bd.length === 1 ? ' watch' : ' watches') + '</span></div>' +
-    recLine('breakdown') +
+    recLine('breakdown') + feedNote(bd) +
     (bd.length ? bd.map(playHTML).join('') : emptyNote(sn.breakdown || 'No breakdown setups this morning — nothing cleared the desk.')) + '</div>';
   $('hcmBand').innerHTML = '<div class="hcm-grid">' + buyHTML + boHTML + bdHTML + '</div>';
   if (buys.length) jwLive.start(buys[0].symbol);
