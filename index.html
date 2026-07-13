@@ -984,6 +984,7 @@ function enterBoard(skip) {
     if (!$('brief').classList.contains('gone')) return;
     if ($('org').classList.contains('shown')) return;
     if ($('thesis').classList.contains('shown')) return;
+    if ($('reports').classList.contains('shown')) return;   // reports has its own swipe handler
     if (e.target.closest('#hcmBuyCard')) return;
     if (e.target.closest('#hero')) return;
     if (e.target.closest('#chatDock')) return;
@@ -1756,8 +1757,12 @@ function goToOrg(){
   $('brief').classList.add('gone');
   if (!boardInitialized) { boardInitialized = true; initBoard(); }
   if (!orgInitialized) renderOrg();
+  renderTheses();
   renderReports();
-  $('reports').classList.add('shown');   // the firm now lives under Reports — keep it beneath
+  // the firm lives under Reports, which lives under Thesis scout — keep the whole chain stacked
+  // in place beneath, so swiping back peels the firm → reports → thesis cleanly.
+  stackUnder('thesis');
+  stackUnder('reports');
   $('org').classList.add('shown');
   sessionStorage.setItem('jwPage', 'org');
 }
@@ -1786,19 +1791,26 @@ function closeThesisToBoard(){ $('thesis').classList.remove('shown'); sessionSto
 function closeThesisToBrief(){ $('thesis').classList.remove('shown'); $('brief').classList.remove('gone'); window.scrollTo(0, 0); sessionStorage.setItem('jwPage', 'brief'); }
 
 /* ---------- reports page navigation ---------- */
+// Put a page in place UNDER the current one without animating it (so a back-swipe reveals a
+// stationary page rather than sliding a second one in). No-op if it's already shown.
+function stackUnder(id){ var e = $(id); if (e && !e.classList.contains('shown')) { e.style.transition = 'none'; e.classList.add('shown'); e.offsetHeight; e.style.transition = ''; } }
 function openReports(){
   $('brief').classList.add('gone');
   if (!boardInitialized) { boardInitialized = true; initBoard(); }
+  renderTheses();
   renderReports();
   $('org').classList.remove('shown');
-  $('thesis').classList.remove('shown');
+  // keep Thesis scout in place UNDER reports (instant, no slide) so swiping back reveals it
+  // cleanly instead of animating a second page in. Reports is the only layer that moves.
+  stackUnder('thesis');
   $('reports').classList.add('shown');
   window.scrollTo(0, 0);
   sessionStorage.setItem('jwPage', 'reports');
 }
 function closeReportsToBoard(){ $('reports').classList.remove('shown'); $('thesis').classList.remove('shown'); sessionStorage.setItem('jwPage', 'board'); }
 function closeReportsToBrief(){ $('reports').classList.remove('shown'); $('thesis').classList.remove('shown'); $('brief').classList.remove('gone'); window.scrollTo(0, 0); sessionStorage.setItem('jwPage', 'brief'); }
-function closeReportsToThesis(){ $('reports').classList.remove('shown'); openThesis(); }
+// back to thesis = just slide reports off; thesis is already sitting in place underneath
+function closeReportsToThesis(){ $('reports').classList.remove('shown'); window.scrollTo(0, 0); sessionStorage.setItem('jwPage', 'thesis'); }
 // swipe on reports: right → back to thesis scout
 (function(){
   var tx = null, ty = null, sw = false, el = $('reports');
@@ -2056,13 +2068,14 @@ if (_jwPage === 'board') enterBoard(true);
 else if (_jwPage === 'org') {
   enterBoard(true);
   if (!orgInitialized) renderOrg();
-  renderReports();
-  var _rp0 = $('reports'); _rp0.style.transition = 'none'; _rp0.classList.add('shown'); _rp0.offsetHeight; _rp0.style.transition = '';   // firm sits over reports
+  renderTheses(); renderReports();
+  stackUnder('thesis'); stackUnder('reports');   // firm sits over reports over thesis
   var _o = $('org'); _o.style.transition = 'none'; _o.classList.add('shown'); _o.offsetHeight; _o.style.transition = '';
 }
 else if (_jwPage === 'reports') {
   enterBoard(true);
-  renderReports();
+  renderTheses(); renderReports();
+  stackUnder('thesis');   // thesis sits under reports so swipe-back reveals it
   var _rp = $('reports'); _rp.style.transition = 'none'; _rp.classList.add('shown'); _rp.offsetHeight; _rp.style.transition = '';
 }
 else if (_jwPage === 'thesis') {
