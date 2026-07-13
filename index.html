@@ -1277,6 +1277,17 @@ function renderTheses() {
   var host = $('thesisList'); if (!host || thesisRendered) return;
   thesisRendered = true;
   var list = Array.isArray(B.theses) ? B.theses.filter(function(t) { return t.status === 'open'; }) : [];
+  // Rank highest conviction to the top (strong > tilt > lean > none); within a band, the better
+  // live performer (basket vs SPY) leads, then the newest — so a working lean idea isn't buried.
+  var THRANK = { strong: 0, tilt: 1, lean: 2, none: 3 };
+  list.sort(function(a, b) {
+    var ra = THRANK[a.band] != null ? THRANK[a.band] : 3, rb = THRANK[b.band] != null ? THRANK[b.band] : 3;
+    if (ra !== rb) return ra - rb;
+    var pa = (a.performance && a.performance.excessPct != null) ? a.performance.excessPct : -Infinity;
+    var pb = (b.performance && b.performance.excessPct != null) ? b.performance.excessPct : -Infinity;
+    if (pb !== pa) return pb - pa;
+    return (b.openedAt || '').localeCompare(a.openedAt || '');
+  });
   $('thesisSub').textContent = list.length
     ? list.length + ' open ' + (list.length === 1 ? 'thesis' : 'theses') + ' · performance and evidence update each morning'
     : 'structural ideas — researched, graded, and tracked against the market until they resolve';
