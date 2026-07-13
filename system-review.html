@@ -190,7 +190,7 @@
   .secnav a:hover{color:var(--ink);background:var(--panel)}
   .secnav a.on{color:var(--amber);background:var(--amber-soft);
     border-color:color-mix(in srgb,var(--amber) 30%,transparent)}
-  @media print{.secnav{display:none}}
+  @media print{.secnav{display:none} .reveal{opacity:1 !important;transform:none !important}}
 
   /* week-at-a-glance grid */
   .weekwrap{overflow-x:auto;margin:8px 0 12px}
@@ -210,6 +210,7 @@
   .weeknote b{color:var(--amber)}
 
   @media (prefers-reduced-motion:no-preference){
+    html{scroll-behavior:smooth}
     .card,ol.dec li{transition:border-color .2s ease,transform .2s ease}
     .reveal{opacity:0;transform:translateY(12px);transition:opacity .5s ease,transform .5s cubic-bezier(0.23,1,0.32,1)}
     .reveal.in{opacity:1;transform:none}
@@ -557,8 +558,8 @@
   links.forEach(function(a){ byId[a.getAttribute('href').slice(1)] = a; });
 
   function setActive(id){
-    links.forEach(function(a){ a.classList.remove('on'); });
-    if (byId[id]) byId[id].classList.add('on');
+    links.forEach(function(a){ a.classList.remove('on'); a.removeAttribute('aria-current'); });
+    if (byId[id]){ byId[id].classList.add('on'); byId[id].setAttribute('aria-current','true'); }
   }
 
   var sections = Array.prototype.slice.call(document.querySelectorAll('section[id]'));
