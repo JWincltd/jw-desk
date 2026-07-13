@@ -1,0 +1,359 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>@media print{ .wrap{max-width:920px!important;padding:0!important} @page{size:1000px 1414px;margin:40px} a{color:#136A64!important} }</style></head><body><title>JW Desk — System Review</title>
+<style>
+  :root{
+    --bg:#F5F6F7; --surface:#FFFFFF; --surface-2:#FBFBFC;
+    --ink:#191F23; --muted:#5C686E; --faint:#8A959B; --hair:#E3E7EA;
+    --accent:#136A64; --accent-soft:#E4F0EE;
+    --good:#2C7A57; --good-bg:#E7F1EC;
+    --watch:#9A6A16; --watch-bg:#F6EEDD;
+    --crit:#A63F26; --crit-bg:#F6E5DF;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+    --maxw:920px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#101518; --surface:#171E22; --surface-2:#141A1E;
+      --ink:#E9EEF0; --muted:#98A4AA; --faint:#6E7C82; --hair:#263137;
+      --accent:#57C2B9; --accent-soft:#14322F;
+      --good:#5FBF8E; --good-bg:#15271F;
+      --watch:#D9AE55; --watch-bg:#2A2314;
+      --crit:#E08163; --crit-bg:#2C1B15;
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#F5F6F7; --surface:#FFFFFF; --surface-2:#FBFBFC;
+    --ink:#191F23; --muted:#5C686E; --faint:#8A959B; --hair:#E3E7EA;
+    --accent:#136A64; --accent-soft:#E4F0EE;
+    --good:#2C7A57; --good-bg:#E7F1EC; --watch:#9A6A16; --watch-bg:#F6EEDD; --crit:#A63F26; --crit-bg:#F6E5DF;
+  }
+  :root[data-theme="dark"]{
+    --bg:#101518; --surface:#171E22; --surface-2:#141A1E;
+    --ink:#E9EEF0; --muted:#98A4AA; --faint:#6E7C82; --hair:#263137;
+    --accent:#57C2B9; --accent-soft:#14322F;
+    --good:#5FBF8E; --good-bg:#15271F; --watch:#D9AE55; --watch-bg:#2A2314; --crit:#E08163; --crit-bg:#2C1B15;
+  }
+
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;
+    -webkit-font-smoothing:antialiased;margin:0}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:clamp(28px,5vw,64px) clamp(18px,4vw,40px)}
+  .eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:600}
+  h1{font-family:var(--serif);font-weight:600;font-size:clamp(30px,5.4vw,46px);line-height:1.08;
+    letter-spacing:-.01em;text-wrap:balance;margin:.5rem 0 .35rem}
+  .lede{font-size:clamp(16px,2.2vw,18.5px);color:var(--muted);max-width:62ch;text-wrap:pretty}
+  .meta{font-family:var(--mono);font-size:12.5px;color:var(--faint);margin-top:1.1rem;
+    display:flex;flex-wrap:wrap;gap:.4rem 1.1rem;align-items:center}
+  h2{font-family:var(--serif);font-weight:600;font-size:clamp(21px,3.2vw,27px);letter-spacing:-.01em;
+    text-wrap:balance;margin:0}
+  h3{font-family:var(--serif);font-weight:600;font-size:18px;margin:0 0 .15rem}
+  section{margin-top:clamp(38px,6vw,64px)}
+  .sec-head{display:flex;flex-direction:column;gap:.35rem;margin-bottom:1.4rem;
+    padding-bottom:.9rem;border-bottom:1px solid var(--hair)}
+  .sec-head p{margin:.15rem 0 0;color:var(--muted);max-width:64ch}
+  p{text-wrap:pretty}
+  a{color:var(--accent)}
+  strong{font-weight:600}
+
+  .chip{display:inline-flex;align-items:center;gap:.4em;font-family:var(--mono);font-size:11px;
+    font-weight:600;letter-spacing:.03em;text-transform:uppercase;padding:.2em .6em;border-radius:999px;
+    border:1px solid transparent;white-space:nowrap}
+  .chip.live{color:var(--good);background:var(--good-bg)}
+  .chip.trial{color:var(--watch);background:var(--watch-bg)}
+  .chip.calib{color:var(--muted);background:var(--surface-2);border-color:var(--hair)}
+  .chip.crit{color:var(--crit);background:var(--crit-bg)}
+  .chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:0 0 auto}
+  .legend{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:14px}
+  .card{background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:18px 18px 16px;
+    display:flex;flex-direction:column;gap:.35rem}
+  .card .why{color:var(--muted);font-size:14.5px;margin:0}
+  .card .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);font-weight:600}
+  .card .metric{font-family:var(--mono);font-size:12px;color:var(--accent);margin-top:.2rem;
+    font-variant-numeric:tabular-nums}
+  .group-label{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink);font-weight:700;margin:1.9rem 0 .8rem;display:flex;align-items:center;gap:.7rem}
+  .group-label::after{content:"";height:1px;background:var(--hair);flex:1}
+
+  .tablewrap{overflow-x:auto;border:1px solid var(--hair);border-radius:12px;background:var(--surface)}
+  table{border-collapse:collapse;width:100%;min-width:560px;font-size:14.5px}
+  th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--hair);vertical-align:top}
+  thead th{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--faint);font-weight:600;background:var(--surface-2)}
+  tbody tr:last-child td{border-bottom:none}
+  td.when{font-family:var(--mono);font-size:12.5px;color:var(--accent);white-space:nowrap;
+    font-variant-numeric:tabular-nums}
+  td.report{font-weight:600;white-space:nowrap}
+
+  .rows{display:flex;flex-direction:column;border:1px solid var(--hair);border-radius:12px;
+    overflow:hidden;background:var(--surface)}
+  .row{display:grid;grid-template-columns:150px 1fr;gap:16px;padding:14px 18px;border-bottom:1px solid var(--hair)}
+  .row:last-child{border-bottom:none}
+  .row .k{font-weight:600}
+  .row .v{color:var(--muted)}
+  @media (max-width:560px){ .row{grid-template-columns:1fr;gap:2px} }
+
+  ul.clean{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:12px}
+  ul.clean>li{background:var(--surface);border:1px solid var(--hair);border-radius:10px;padding:13px 16px;
+    display:grid;grid-template-columns:auto 1fr;gap:13px;align-items:start}
+  ul.clean>li .body{margin:0}
+  ul.clean>li .body b{font-weight:600}
+  ul.clean>li .body .why{color:var(--muted);display:block;font-size:14px;margin-top:.1rem}
+  .sev{margin-top:2px}
+  .num{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--accent);
+    letter-spacing:.05em;margin-top:3px;min-width:1.5rem}
+
+  .callout{border-left:3px solid var(--accent);padding:.3rem 0 .3rem 1rem;color:var(--muted);
+    font-size:15.5px;margin:1.3rem 0 0;font-style:italic}
+  .callout em{color:var(--ink);font-style:italic}
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--hair);color:var(--faint);
+    font-size:12.5px;font-family:var(--mono);line-height:1.7}
+  .mono{font-family:var(--mono)}
+  @media (prefers-reduced-motion:no-preference){
+    .card,ul.clean>li{transition:border-color .15s ease}
+    .card:hover,ul.clean>li:hover{border-color:var(--accent)}
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">JW Private Wealth · Desk Operating System</div>
+    <h1>The desk that works nights and weekends</h1>
+    <p class="lede">A full picture of how the system makes its calls, grades every one of them as it plays
+      out, and now researches and briefs around the clock. Below: what changed and why, the automated
+      schedule, the honest blind spots, and where we could take it next.</p>
+    <div class="meta"><span>Updated 12 July 2026</span><span>Prepared for review with the partner</span></div>
+    <div class="legend">
+      <span class="chip live">Live</span>
+      <span class="chip trial">Paper trial</span>
+      <span class="chip calib">Calibrating</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Orientation</div>
+      <h2>What the system is</h2>
+    </div>
+    <p>Each morning before the open, the system screens the whole US market, runs a fan-out of analyst
+      agents, and publishes three cards to a private board — <strong>highest-conviction picks</strong>,
+      <strong>breakout option plays</strong>, and <strong>breakdown option plays</strong>. Every
+      recommendation is recorded the moment it's published and graded as real prices come in, so the board
+      shows a genuine track record next to today's picks. This build added two things the desk never had:
+      it now <strong>calibrates its own rules against history</strong>, and it <strong>works the whole
+      weekend</strong> instead of sitting idle.</p>
+    <div class="callout">The goal, unchanged: identify winning moves <em>before</em> they happen — and keep
+      an honest, automatic record of whether we actually did.</div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">The board</div>
+      <h2>What you see each morning</h2>
+      <p>Three cards, published pre-open. Each is now filtered by the market regime, and each is tracked and
+        graded automatically.</p>
+    </div>
+    <div class="cards">
+      <div class="card"><span class="tag">Long · calls</span><h3>Highest-conviction picks</h3>
+        <p class="why">The chief's best long ideas — a leader pulling back in an uptrend — expressed as calls.</p></div>
+      <div class="card"><span class="tag">Long · calls</span><h3>Breakout plays</h3>
+        <p class="why">Names coiled under a key level, played as calls if they break through.</p></div>
+      <div class="card"><span class="tag">Short · puts</span><h3>Breakdown plays</h3>
+        <p class="why">Short setups expressed as puts — now held to a deliberately high bar (see below).</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">This build</div>
+      <h2>What changed, and why</h2>
+      <p>Grouped by intent. Every item carries a one-line reason it was added.</p>
+    </div>
+
+    <div class="group-label">Reliability</div>
+    <div class="cards">
+      <div class="card"><span class="chip live">Live</span><h3>Web-app refresh fix</h3>
+        <p class="why">The installed app kept flickering and reloading after every publish; it now refreshes
+          cleanly and lands on the new board.</p></div>
+    </div>
+
+    <div class="group-label">Self-calibration</div>
+    <div class="cards">
+      <div class="card"><span class="chip live">Live</span><h3>Two-year backtest</h3>
+        <p class="why">Replays our setups across two years of the whole market so we learn whether a rule is
+          set right <em>now</em>, instead of waiting a quarter for live results.</p></div>
+      <div class="card"><span class="chip live">Live</span><h3>Threshold sweeps</h3>
+        <p class="why">Tests each timing and exit setting against history and flags any that would clearly
+          have paid better — nothing changes without a human decision.</p></div>
+    </div>
+
+    <div class="group-label">Trading with the regime</div>
+    <div class="cards">
+      <div class="card"><span class="chip live">Live</span><h3>Long gate — only in a healthy tape</h3>
+        <p class="why">Long setups only carry their edge when the market is above its 200-day average; in a
+          weak tape the desk holds them and logs the counterfactual to prove the call.</p>
+        <p class="metric">Backtest: +0.23R → +0.32R · drawdown −64%</p></div>
+      <div class="card"><span class="chip live">Live</span><h3>Short gate — don't fight a bull</h3>
+        <p class="why">Mirror rule: when the market is strong the desk holds breakdown plays off the board,
+          so we're not shorting into an uptrend. Also logged, so we can measure whether it helps.</p></div>
+    </div>
+
+    <div class="group-label">Making shorts pay — research, not yet live</div>
+    <div class="cards">
+      <div class="card"><span class="chip live">Live</span><h3>Short-strategy lab</h3>
+        <p class="why">Searches many short setups against two years, with a three-period out-of-sample guard
+          so a lucky fit can't masquerade as a real edge.</p></div>
+      <div class="card"><span class="chip trial">Paper trial</span><h3>Deep-break short</h3>
+        <p class="why">The one short that survived the guard — a decisive break of support, shorted on the
+          retest — is paper-traded to prove it on live data before it risks a dollar.</p>
+        <p class="metric">Recent 6-mo: ~+0.31R</p></div>
+      <div class="card"><span class="chip trial">Paper trial</span><h3>Graduation check-in</h3>
+        <p class="why">Auto-sends a go / no-go on that short every two weeks, so the decision to promote it
+          — or kill it — never slips through the cracks.</p></div>
+      <div class="card"><span class="chip calib">Calibrating</span><h3>Break-depth split</h3>
+        <p class="why">Measures whether our own shorts pay more on decisive breaks than marginal ones — the
+          live evidence for whether to graduate the deep-break short.</p></div>
+    </div>
+
+    <div class="group-label">The weekend desk — new</div>
+    <div class="cards">
+      <div class="card"><span class="chip live">Live</span><h3>Pre-brief</h3>
+        <p class="why">Stages next week's earnings and macro landmines on Saturday, so Monday opens briefed
+          instead of cold.</p></div>
+      <div class="card"><span class="chip live">Live</span><h3>Deep-read</h3>
+        <p class="why">Pulls the latest SEC filings and news on every position and digests what changed — the
+          reading a human analyst does Sunday night.</p></div>
+      <div class="card"><span class="chip live">Live</span><h3>Portfolio risk</h3>
+        <p class="why">Clusters the book by how the names actually move together, catching hidden crowding no
+          single card can see.</p></div>
+      <div class="card"><span class="chip live">Live</span><h3>News watch</h3>
+        <p class="why">Sweeps weekend market news for anything that could gap the tape — or our names — on
+          Monday.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Automation</div>
+      <h2>The reports, and when they run</h2>
+      <p>Everything below runs on its own and arrives as a notification on your phone.</p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Report</th><th>Runs</th><th>What it delivers</th></tr></thead>
+        <tbody>
+          <tr><td class="report">Morning board</td><td class="when">Weekdays · pre-open</td>
+            <td>The three play cards, published to the board with live regime gating.</td></tr>
+          <tr><td class="report">Thesis desk</td><td class="when">Daily · Mon scout</td>
+            <td>Grades any thesis you paste in; on Mondays, originates next-phase ideas.</td></tr>
+          <tr><td class="report">Weekly desk review</td><td class="when">Fridays</td>
+            <td>Track record, per-rule verdicts, and the break-depth split. Month / quarter / year reviews close on their boundaries.</td></tr>
+          <tr><td class="report">Backtest</td><td class="when">Saturdays</td>
+            <td>Recalibrates the desk's thresholds against two years of history.</td></tr>
+          <tr><td class="report">Weekend pre-brief</td><td class="when">Saturdays</td>
+            <td>Next week's earnings on our names, plus macro landmines (Fed, CPI, jobs).</td></tr>
+          <tr><td class="report">Deep-read</td><td class="when">Sundays</td>
+            <td>Filings + news digest for every position, with a for / against read.</td></tr>
+          <tr><td class="report">Portfolio risk</td><td class="when">Sundays</td>
+            <td>Correlation clusters, concentration, and the book's market beta.</td></tr>
+          <tr><td class="report">News watch</td><td class="when">Sundays</td>
+            <td>Weekend market-news sweep, triaged for Monday gap risk.</td></tr>
+          <tr><td class="report">Deep-break trial</td><td class="when">Weekday evenings</td>
+            <td>Accumulates the paper short's live forward record after the close.</td></tr>
+          <tr><td class="report">Graduation check-in</td><td class="when">1st &amp; 15th</td>
+            <td>A go / no-go on graduating the deep-break short to the live board.</td></tr>
+          <tr><td class="report">Short-strategy lab</td><td class="when">Monthly · 1st</td>
+            <td>Re-runs the short search out-of-sample as new data accrues.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Reading the record</div>
+      <h2>How performance is measured</h2>
+    </div>
+    <div class="rows">
+      <div class="row"><div class="k">R — the risk unit</div><div class="v"><span class="mono">+1R</span>
+        means a play made what we risked on it; <span class="mono">−1R</span> means it lost that. A positive
+        <em>average</em> R is profitable over many trades — even with a sub-50% win rate, when the winners run bigger than the losers.</div></div>
+      <div class="row"><div class="k">Simulated P&amp;L</div><div class="v">The track record is graded on real
+        daily prices with deliberately conservative rules — any ambiguity grades against us. It is not live
+        broker fills.</div></div>
+      <div class="row"><div class="k">"Calibrating"</div><div class="v">Conviction tiers (strong / tilt /
+        lean) and hit rates read "calibrating" until enough plays have closed to be more than noise —
+        roughly two more weeks.</div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Known limits</div>
+      <h2>Blind spots — where the system can't see</h2>
+      <p>Stated plainly, so the two of you can weigh them honestly.</p>
+    </div>
+    <ul class="clean">
+      <li><span class="chip crit sev">Core</span><p class="body"><b>No live options data.</b><span class="why">The desk names plays but can't see implied volatility, greeks, or the option's own price — a thin edge in the underlying can be eaten by the option's spread and time decay.</span></p></li>
+      <li><span class="chip crit sev">Core</span><p class="body"><b>Selection edge is still unproven.</b><span class="why">The whole system rests on the picks being good; the live ledger is too young to have confirmed that yet. Everything else is machinery around that central bet.</span></p></li>
+      <li><span class="chip trial sev">Data</span><p class="body"><b>Daily bars only — no true intraday.</b><span class="why">The fastest hold we can test or trade is one session; genuine same-day setups aren't visible.</span></p></li>
+      <li><span class="chip trial sev">Execution</span><p class="body"><b>Simulated fills, not a broker.</b><span class="why">No real slippage, liquidity, or short-borrow checks — paper P&amp;L can flatter a strategy that's hard to actually execute.</span></p></li>
+      <li><span class="chip trial sev">Scope</span><p class="body"><b>The "book" is a watch-list, not a weighted portfolio.</b><span class="why">It's our theses plus recent plays, with no position sizes — so concentration reads as directional, not exact.</span></p></li>
+      <li><span class="chip calib sev">Maturity</span><p class="body"><b>Conviction bands aren't calibrated yet.</b><span class="why">The tiers are placeholders until the record matures; for now, trust the numbers, not the labels.</span></p></li>
+      <li><span class="chip calib sev">Trust</span><p class="body"><b>The written memos can overreach.</b><span class="why">The narrative summaries occasionally assert a figure the system never computed. The data tables are the record of truth; the prose is color.</span></p></li>
+      <li><span class="chip calib sev">Coverage</span><p class="body"><b>Macro calendar is sparse.</b><span class="why">Only the monthly jobs report is automatic; Fed and CPI dates must be entered and verified to appear in the pre-brief.</span></p></li>
+      <li><span class="chip calib sev">Infra</span><p class="body"><b>Single free-tier data feeds.</b><span class="why">Prices, news, and filings each come from one free source with rate limits — a single point of failure per feed.</span></p></li>
+      <li><span class="chip calib sev">Signal</span><p class="body"><b>The regime signal is one crude line.</b><span class="why">A single on/off — market above or below its 200-day average — with no volatility, breadth, or credit nuance.</span></p></li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">For discussion</div>
+      <h2>Additions to make it more effective</h2>
+      <p>A menu to talk through together — roughly highest-leverage first.</p>
+    </div>
+    <ul class="clean">
+      <li><span class="num">01</span><p class="body"><b>Live options data — chains, IV, greeks.</b><span class="why">Turns "name a play" into "price a play": size trades to real cost and stop treating spread and time decay as free. The single biggest upgrade.</span></p></li>
+      <li><span class="num">02</span><p class="body"><b>A real position book with sizes.</b><span class="why">Actual weights unlock true portfolio P&amp;L, position sizing, and exact concentration instead of a directional watch-list.</span></p></li>
+      <li><span class="num">03</span><p class="body"><b>Paper-broker, then live-broker integration.</b><span class="why">Real fills validate — or expose — the simulator, and give an execution record we can trust.</span></p></li>
+      <li><span class="num">04</span><p class="body"><b>Full-text filing &amp; transcript reading.</b><span class="why">The deep-read lists filings and summarizes headlines today; reading the actual 10-Q and earnings call is the next level of edge.</span></p></li>
+      <li><span class="num">05</span><p class="body"><b>A richer regime model.</b><span class="why">Fold in volatility, market breadth, and credit spreads for smarter, graduated gating rather than one on/off line.</span></p></li>
+      <li><span class="num">06</span><p class="body"><b>One consolidated weekend digest.</b><span class="why">Merge the several Saturday/Sunday notifications into a single week-ahead briefing so nothing is lost in the volume.</span></p></li>
+      <li><span class="num">07</span><p class="body"><b>Verified macro calendar auto-feed.</b><span class="why">Wire in a confirmed Fed / CPI schedule so the pre-brief flags every landmine, not just jobs day.</span></p></li>
+      <li><span class="num">08</span><p class="body"><b>Guardrails on the written memos.</b><span class="why">Constrain the summaries to only cite numbers the system actually computed — closes the "overreach" blind spot.</span></p></li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Audit</div>
+      <h2>Not yet optimized — fix / improve / decide</h2>
+      <p>The current rough edges, with a severity read.</p>
+    </div>
+    <ul class="clean">
+      <li><span class="chip trial sev">Decide</span><p class="body"><b>The short gate currently hides every breakdown play.</b><span class="why">Because the market is risk-on today, no puts reach the board at all. Confirm that "no mechanical shorts in a bull tape" is the behavior we want.</span></p></li>
+      <li><span class="chip trial sev">Improve</span><p class="body"><b>Notification volume.</b><span class="why">Five-plus separate weekend reports arrive as separate alerts; a single digest would cut the noise.</span></p></li>
+      <li><span class="chip trial sev">Fix</span><p class="body"><b>Memo fabrication.</b><span class="why">The narrative memos have twice cited a figure we never computed — constraining the prompts is a small, high-value fix.</span></p></li>
+      <li><span class="chip calib sev">Improve</span><p class="body"><b>Deep-read and news-watch overlap on per-name headlines.</b><span class="why">Both pull company news; de-duplicating keeps each report sharp.</span></p></li>
+      <li><span class="chip calib sev">Improve</span><p class="body"><b>Portfolio risk uses an unweighted list.</b><span class="why">Adding real position weights turns "directional crowding" into exact concentration.</span></p></li>
+      <li><span class="chip calib sev">Improve</span><p class="body"><b>Short tickers escape the news flag.</b><span class="why">Two-letter symbols (MO, PM) are skipped to avoid false matches; matching on company name would catch them.</span></p></li>
+      <li><span class="chip calib sev">Tune</span><p class="body"><b>Backtest and lab re-download two years each run.</b><span class="why">Caching the history would cut runtime and API load.</span></p></li>
+      <li><span class="chip calib sev">Tune</span><p class="body"><b>The automation runtime is a version behind.</b><span class="why">GitHub is deprecating the Node version the jobs use; a routine bump keeps them from breaking later.</span></p></li>
+      <li><span class="chip calib sev">Populate</span><p class="body"><b>Macro calendar is empty beyond jobs day.</b><span class="why">Add verified Fed / CPI dates and the pre-brief lights up immediately.</span></p></li>
+    </ul>
+  </section>
+
+  <footer>
+    Research and tracking system — not investment advice. All performance shown is simulated P&amp;L on real
+    prices. Narrative memos are advisory; the data tables are the record of truth.<br>
+    JW Private Wealth · desk operating system · 12 July 2026
+  </footer>
+
+</div>
+</body></html>
