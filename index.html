@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-title" content="JW Desk">
 <meta name="theme-color" content="#211F1B">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>JW Desk — Wed, Jun 17, 2026, 05:22 PM ET</title>
+<title>JW Desk — Mon, Jul 13, 2026, 06:55 AM ET</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
 <style>
@@ -757,7 +757,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     </div>
   </div>
   <div class="foot">
-    <div class="top"><span class="lab">Wed, Jun 17, 2026, 05:22 PM ET</span><button class="redo" onclick="location.reload()">↺ replay briefing</button></div>
+    <div class="top"><span class="lab" id="footDate">Mon, Jul 13, 2026, 06:55 AM ET</span><button class="redo" onclick="location.reload()">↺ replay briefing</button></div>
     <p class="disclaimer"><b style="color:var(--fg-dim)">Internal research note — not investment advice.</b> A coverage-universe scan narrowed to overnight movers, one analyst agent per surviving name, synthesized by a CIO pass. Sparklines and the ticker are illustrative (no intraday tick data on this feed). Conviction bands are ordinal and uncalibrated; no probabilities, no position sizing. Options plays express the desk&#8217;s directional calls; the strike, expiry, premium and implied volatility are pulled from the live options chain as of the pre-open snapshot (premiums are indicative, not executable quotes). When the options feed is unavailable a card falls back to a structural note without contract detail.</p>
     <div class="prov" id="pProv"></div>
   </div>
@@ -930,7 +930,9 @@ function renderBriefing() {
   (function () { let n = 0; const tgt = t.dayPL, st = tgt / 26; const iv = setInterval(() => { n += st; if (Math.abs(n) >= Math.abs(tgt)) { n = tgt; clearInterval(iv); } plEl.textContent = signed(n); }, 26); })();
   // report-bar teaser (what's waiting in the market read)
   const hl = B.headline || ''; const teaseHl = hl.length > 70 ? hl.slice(0, 68).replace(/\s+\S*$/, '') + ' …' : hl;
-  $('rbTease').innerHTML = '<b>' + B.funnel.agents + '</b> movers analyzed · <b>' + B.funnel.calls + '</b> conviction call' + (B.funnel.calls === 1 ? '' : 's') + (teaseHl ? ' · “' + escc(teaseHl) + '”' : '');
+  $('rbTease').innerHTML = '<b>' + B.funnel.moved + '</b> mover' + (B.funnel.moved === 1 ? '' : 's') + ' flagged · <b>' + B.funnel.calls + '</b> conviction call' + (B.funnel.calls === 1 ? '' : 's') + (teaseHl ? ' · “' + escc(teaseHl) + '”' : '');
+  // live date from the payload — the baked title/footer text goes stale between runs
+  try { if (B.dateStr) { document.title = 'JW Desk — ' + B.dateStr; const footDateEl = $('footDate'); if (footDateEl) footDateEl.textContent = B.dateStr; } } catch (e) {}
   // treemap of the book — tile area ∝ √value, color ∝ overnight move
   const pos = B.portfolio.positions.slice().sort((a, b) => (b.value || 0) - (a.value || 0));
   const rows = [[], [], []], sums = [0, 0, 0];
@@ -1442,7 +1444,7 @@ function heroCard(m, rank) {
     ofBadge +
     convHTML +
     '<button class="htoggle" onclick="toggleHeroDetail(this)">Full analysis ↓</button>' +
-    '<div class="hgrid"><div><div class="lab">Setup</div><p>' + escc(m.setup) + '</p></div><div><div class="lab">Risk</div><p>' + escc(m.risk) + '</p></div><div><div class="lab">Catalyst</div><p>' + escc(m.catalyst) + '</p></div><div><div class="lab">Key Level' + bellBtn + '</div><p>' + escc(keyLevelInvalid) + '</p></div>' + consensusHTML + ofNoteHTML + '</div>' +
+    '<div class="hgrid"><div><div class="lab">Setup</div><p>' + escc(m.setup) + '</p></div><div><div class="lab">Risk</div><p>' + escc(m.risk) + '</p></div><div><div class="lab">Catalyst</div><p>' + escc(m.catalyst === 'unclear' ? 'no clear catalyst' : m.catalyst) + '</p></div><div><div class="lab">Key Level' + bellBtn + '</div><p>' + escc(keyLevelInvalid) + '</p></div>' + consensusHTML + ofNoteHTML + '</div>' +
     '<div class="hinv">✕ invalidation — ' + escc(keyLevelInvalid) + '</div>';
 }
 function initBoard() {
@@ -1468,7 +1470,7 @@ function initBoard() {
   const rankCls = (i) => i === 0 ? ' r1' : i === 1 ? ' r2' : i === 2 ? ' r3' : '';
   const hrDotCls = (r) => r >= 65 ? 'hi' : r >= 50 ? 'mid' : 'lo';
   const hrDotHTML = (m) => m.hitRate ? '<span class="hr-dot ' + hrDotCls(m.hitRate.rate) + '" title="Past accuracy: ' + m.hitRate.rate + '% on ' + m.hitRate.sample + ' calls"></span>' : '';
-  listEl.innerHTML = '<div class="list-legend"><span style="display:flex;gap:4px;align-items:center"><span class="hr-dot hi"></span><span class="hr-dot mid"></span><span class="hr-dot lo"></span></span>Past accuracy</div>' + MOV.map((m, i) => '<div class="lrow' + rankCls(i) + '" data-i="' + i + '"><span class="rk">' + (i + 1) + '</span><span class="sym">' + tlogo(m.symbol, 18) + m.symbol + '</span><span class="cat">' + (m.isCall ? '<span class="callflag"></span> ' : '') + escc(m.catalyst) + '</span>' + miniSVG(m.symbol, m.changePct) + '<span class="mv ' + cls(m.changePct) + '">' + pct(m.changePct) + '</span>' + hrDotHTML(m) + '</div>').join('');
+  listEl.innerHTML = '<div class="list-legend"><span style="display:flex;gap:4px;align-items:center"><span class="hr-dot hi"></span><span class="hr-dot mid"></span><span class="hr-dot lo"></span></span>Past accuracy</div>' + MOV.map((m, i) => '<div class="lrow' + rankCls(i) + '" data-i="' + i + '"><span class="rk">' + (i + 1) + '</span><span class="sym">' + tlogo(m.symbol, 18) + m.symbol + '</span><span class="cat">' + (m.isCall ? '<span class="callflag"></span> ' : '') + escc(m.catalyst === 'unclear' ? 'no clear catalyst' : m.catalyst) + '</span>' + miniSVG(m.symbol, m.changePct) + '<span class="mv ' + cls(m.changePct) + '">' + pct(m.changePct) + '</span>' + hrDotHTML(m) + '</div>').join('');
   const rows = [].slice.call(listEl.querySelectorAll('.lrow')); let cur = 0;
   var heroDots = $('heroDots');
   if (heroDots && MOV.length > 1) {
