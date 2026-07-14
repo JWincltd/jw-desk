@@ -370,6 +370,19 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-size.full{color:var(--positive);border-color:rgba(74,135,98,.35)}
 .hcm-size.half{color:var(--amber);border-color:rgba(176,122,46,.42);background:rgba(176,122,46,.06)}
 .hcm-earn{display:flex;gap:6px;align-items:flex-start;font-size:10.5px;line-height:1.45;color:var(--danger);background:rgba(168,68,44,.07);border:1px solid rgba(168,68,44,.28);border-radius:8px;padding:6px 9px;margin:7px 0 2px}
+/* intraday confirmation overlay */
+.iv-banner{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--fg-dim);background:var(--bg-2);border:1px solid var(--line);border-radius:9px;padding:8px 12px;margin-bottom:12px}
+.iv-banner b{color:var(--fg);font-weight:600}
+.iv-banner .iv-lab{color:var(--fg);font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-size:9.5px}
+.iv-dot{width:7px;height:7px;border-radius:50%;background:var(--positive);flex:none}
+@media (prefers-reduced-motion:no-preference){.iv-dot{animation:ivpulse 2.4s ease-in-out infinite}}
+@keyframes ivpulse{0%,100%{opacity:.45}50%{opacity:1}}
+.iv-row{margin:5px 0 2px}
+.iv-chip{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.04em;padding:2px 8px;border-radius:5px;border:1px solid var(--line-2);color:var(--fg-dim);white-space:nowrap;display:inline-block}
+.iv-chip.good{color:var(--positive);border-color:rgba(74,135,98,.42);background:rgba(74,135,98,.08)}
+.iv-chip.bad{color:var(--danger);border-color:rgba(168,68,44,.4);background:rgba(168,68,44,.07)}
+.iv-chip.warn{color:var(--amber);border-color:rgba(176,122,46,.42);background:rgba(176,122,46,.06)}
+.iv-chip.neut{color:var(--fg-mute)}
 .hcm-plevel-row{display:flex;align-items:center;gap:8px;margin-bottom:0}
 .hcm-info{display:inline-flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-mute);border:1px solid var(--line);border-radius:6px;padding:4px 9px;cursor:pointer;background:none;margin-left:auto;transition:color .15s var(--ease),border-color .15s var(--ease);user-select:none;flex:none}
 .hcm-info:hover{color:var(--fg-dim);border-color:var(--line-2)}
@@ -1073,6 +1086,23 @@ function renderHCM() {
   const buys = (Array.isArray(hcm.buy) ? hcm.buy : hcm.buy ? [hcm.buy] : []).filter(Boolean);
   let buyIdx = 0;
 
+  // Intraday confirmation overlay (~1h after the open) — an hour in, which plays actually triggered.
+  // Absent pre-open and on older payloads; the whole board renders identically without it.
+  const IV = hcm.intraday || null;
+  function ivChip(type, sym) {
+    const s = IV && IV.byPlay ? IV.byPlay[type + ':' + sym] : null;
+    if (!s || !s.label) return '';
+    const c = /triggered|target/.test(s.status) ? 'good' : /faded|stopped/.test(s.status) ? 'bad' : s.status === 'working' ? 'warn' : 'neut';
+    return '<span class="iv-chip ' + c + '" title="intraday status">' + escc(s.label) + '</span>';
+  }
+  function ivBanner() {
+    if (!IV) return '';
+    const sc = IV.scorecard || {};
+    const follow = sc.graded ? ' · <b>' + sc.following + '/' + sc.graded + '</b> pre-open calls following through' : '';
+    return '<div class="iv-banner"><span class="iv-dot"></span><span class="iv-lab">Intraday check</span>' +
+      '<span>' + escc(IV.asOfET || '') + ' · +' + IV.minutesAfterOpen + ' min · ' + escc((IV.regime && IV.regime.note) || '') + follow + '</span></div>';
+  }
+
   function buildBuySlide(b) {
     const chg = b.changePct;
     const stats = b.entryZone ? (
@@ -1105,7 +1135,7 @@ function renderHCM() {
         '</div>';
     }
     const buySize = b.size ? '<span class="hcm-size ' + (b.size === 'Half size' ? 'half' : 'full') + '">' + escc(b.size) + '</span>' : '';
-    return '<div class="hcm-top">' + tlogo(b.symbol, 26) + '<span class="hcm-sym">' + escc(b.symbol) + '</span><span class="tag long">long</span>' + buySize + '<span class="hcm-chg ' + cls(chg) + '">' + pct(chg) + '</span></div>' +
+    return '<div class="hcm-top">' + tlogo(b.symbol, 26) + '<span class="hcm-sym">' + escc(b.symbol) + '</span><span class="tag long">long</span>' + buySize + ivChip('buy', b.symbol) + '<span class="hcm-chg ' + cls(chg) + '">' + pct(chg) + '</span></div>' +
       '<div class="hcm-name">' + escc(b.name) + '</div>' +
       whyNow +
       '<div style="display:flex;align-items:center;gap:8px;margin-top:8px">' + accLine + expTag + '</div>' +
@@ -1142,7 +1172,7 @@ function renderHCM() {
     recLine('buy') +
     emptyNote(hcm.note || 'No conviction picks this morning — nothing cleared the desk.') +
     '</div>';
-  const playHTML = (p) => {
+  const playHTML = (p, ptype) => {
     // live options sub-line: the real contract you'd buy — expiry date + current premium range
     var meta = (p.live && (p.expiry || p.premium)) ? '<div class="hcm-pmeta">' +
       (p.expiry ? '<span><span class="mk">expiry</span><b>' + escc(p.expiry) + '</b></span>' : '') +
@@ -1168,6 +1198,7 @@ function renderHCM() {
     return '<div class="hcm-play">' +
       '<div class="hcm-play-top">' + tlogo(p.symbol, 20) + '<span class="hcm-psym">' + p.symbol + '</span><span class="hcm-popt">' + escc(p.play) + '</span>' + sizeChip + '<span class="hcm-pchg ' + cls(p.changePct) + '">' + pct(p.changePct) + '</span></div>' +
       '<div class="hcm-pname">' + escc(p.name) + '</div>' +
+      (ivChip(ptype, p.symbol) ? '<div class="iv-row">' + ivChip(ptype, p.symbol) + '</div>' : '') +
       earn +
       meta +
       '<div class="hcm-plevel-row"><span class="hcm-plevel">Key level → ' + escc(p.keyLevel) + '</span><button class="hcm-info">▸ Details</button></div>' +
@@ -1185,12 +1216,12 @@ function renderHCM() {
   const boHTML = '<div class="hcm-card hcm-bo' + (bo.length ? '' : ' hcm-empty') + '">' +
     '<div class="hcm-hd"><span class="hcm-t">Breakout plays</span><span class="hcm-count">' + bo.length + (bo.length === 1 ? ' watch' : ' watches') + '</span></div>' +
     recLine('breakout') + feedNote(bo) +
-    (bo.length ? bo.map(playHTML).join('') : emptyNote(sn.breakout || 'No breakout setups this morning — nothing cleared the desk.')) + '</div>';
+    (bo.length ? bo.map(function(p) { return playHTML(p, 'breakout'); }).join('') : emptyNote(sn.breakout || 'No breakout setups this morning — nothing cleared the desk.')) + '</div>';
   const bdHTML = '<div class="hcm-card hcm-bd' + (bd.length ? '' : ' hcm-empty') + '">' +
     '<div class="hcm-hd"><span class="hcm-t">Breakdown plays</span><span class="hcm-count">' + bd.length + (bd.length === 1 ? ' watch' : ' watches') + '</span></div>' +
     recLine('breakdown') + feedNote(bd) +
-    (bd.length ? bd.map(playHTML).join('') : emptyNote(sn.breakdown || 'No breakdown setups this morning — nothing cleared the desk.')) + '</div>';
-  $('hcmBand').innerHTML = '<div class="hcm-grid">' + buyHTML + boHTML + bdHTML + '</div>';
+    (bd.length ? bd.map(function(p) { return playHTML(p, 'breakdown'); }).join('') : emptyNote(sn.breakdown || 'No breakdown setups this morning — nothing cleared the desk.')) + '</div>';
+  $('hcmBand').innerHTML = ivBanner() + '<div class="hcm-grid">' + buyHTML + boHTML + bdHTML + '</div>';
   if (buys.length) jwLive.start(buys[0].symbol);
 
   // Lock buy card height after first paint so carousel switches never resize the card
