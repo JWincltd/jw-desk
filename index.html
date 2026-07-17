@@ -368,7 +368,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-prob .mk{color:var(--fg-mute);text-transform:uppercase;letter-spacing:.06em;font-size:8px;margin-left:2px}
 .hcm-exit-row.scale{margin-top:1px;opacity:.82}
 .hcm-exit-row.scale .hcm-exit{font-size:10px}
-.hcm-exit .xtag{font-family:'IBM Plex Mono',monospace;font-size:8.5px;color:var(--fg-mute);text-transform:uppercase;letter-spacing:.06em;margin-left:6px}
+.hcm-exit .xtag,.hcm-plevel .xtag{font-family:'IBM Plex Mono',monospace;font-size:8.5px;color:var(--fg-mute);text-transform:uppercase;letter-spacing:.06em;margin-left:6px}
 .hcm-size{font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:5px;border:1px solid var(--line-2);color:var(--fg-dim);white-space:nowrap;flex:none}
 .hcm-size.full{color:var(--positive);border-color:rgba(74,135,98,.35)}
 .hcm-size.half{color:var(--amber);border-color:rgba(176,122,46,.42);background:rgba(176,122,46,.06)}
@@ -1190,6 +1190,7 @@ function renderHCM() {
     if (exitRow && p.scaleOut) exitRow += '<div class="hcm-exit-row scale"><span class="hcm-exit">Scale-out → <b>' + escc(p.scaleOut) + '</b><span class="xtag">first stall</span></span></div>';
     // detail pills: exit + odds basis, then real IV / delta / open interest when the chain was live
     var pills = [];
+    if (p.validThrough) pills.push(['Window', 'setup good through ' + escc(p.validThrough) + ' (3 sessions incl. today) — untriggered after that, the desk grades it void; wait for a fresh card']);
     if (p.exitBasis) pills.push(['Exit', 'target = ' + escc(p.exitBasis)]);
     if (p.scaleOutBasis) pills.push(['Scale-out', escc(p.scaleOutBasis)]);
     if (p.extremeNote) pills.push(['Caution', escc(p.extremeNote)]);
@@ -1209,7 +1210,8 @@ function renderHCM() {
       (ivChip(ptype, p.symbol) ? '<div class="iv-row">' + ivChip(ptype, p.symbol) + '</div>' : '') +
       earn +
       meta +
-      '<div class="hcm-plevel-row"><span class="hcm-plevel">Key level → ' + escc(p.keyLevel) + '</span><button class="hcm-info">▸ Details</button></div>' +
+      '<div class="hcm-plevel-row"><span class="hcm-plevel">Key level → ' + escc(p.keyLevel) +
+      (p.validThrough ? '<span class="xtag">thru ' + escc(p.validThrough) + '</span>' : '') + '</span><button class="hcm-info">▸ Details</button></div>' +
       exitRow +
       '<div class="hcm-pdetail">' + pillHTML + '</div>' +
       '</div>';
