@@ -366,6 +366,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-prob{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--fg-dim);background:var(--bg-3);border:1px solid var(--line);border-radius:6px;padding:2px 8px;white-space:nowrap}
 .hcm-prob b{color:var(--fg);font-weight:600}
 .hcm-prob .mk{color:var(--fg-mute);text-transform:uppercase;letter-spacing:.06em;font-size:8px;margin-left:2px}
+.hcm-exit-row.scale{margin-top:1px;opacity:.82}
+.hcm-exit-row.scale .hcm-exit{font-size:10px}
+.hcm-exit .xtag{font-family:'IBM Plex Mono',monospace;font-size:8.5px;color:var(--fg-mute);text-transform:uppercase;letter-spacing:.06em;margin-left:6px}
 .hcm-size{font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:5px;border:1px solid var(--line-2);color:var(--fg-dim);white-space:nowrap;flex:none}
 .hcm-size.full{color:var(--positive);border-color:rgba(74,135,98,.35)}
 .hcm-size.half{color:var(--amber);border-color:rgba(176,122,46,.42);background:rgba(176,122,46,.06)}
@@ -1180,11 +1183,16 @@ function renderHCM() {
       '</div>' : '';
     // exit row: the S/R profit target + historical odds of getting there (from the stock's bars)
     var exitRow = p.exit ? '<div class="hcm-exit-row"><span class="hcm-exit">Exit → <b>' + escc(p.exit) + '</b>' +
-      (p.exitPct ? ' <span class="' + (String(p.exitPct).charAt(0) === '-' ? 'dn' : 'up') + '">' + escc(p.exitPct) + '</span>' : '') + '</span>' +
+      (p.exitPct ? ' <span class="' + (String(p.exitPct).charAt(0) === '-' ? 'dn' : 'up') + '">' + escc(p.exitPct) + '</span>' : '') +
+      (p.extremeNote ? '<span class="xtag">near 2-yr ' + (ptype === 'breakdown' ? 'low' : 'high') + '</span>' : '') + '</span>' +
       (p.hitProb ? '<span class="hcm-prob"><b>' + escc(p.hitProb) + '</b> <span class="mk">odds</span></span>' : '') + '</div>' : '';
+    // first likely stall on the way to the exit — a partial-profit / stop-tighten spot
+    if (exitRow && p.scaleOut) exitRow += '<div class="hcm-exit-row scale"><span class="hcm-exit">Scale-out → <b>' + escc(p.scaleOut) + '</b><span class="xtag">first stall</span></span></div>';
     // detail pills: exit + odds basis, then real IV / delta / open interest when the chain was live
     var pills = [];
     if (p.exitBasis) pills.push(['Exit', 'target = ' + escc(p.exitBasis)]);
+    if (p.scaleOutBasis) pills.push(['Scale-out', escc(p.scaleOutBasis)]);
+    if (p.extremeNote) pills.push(['Caution', escc(p.extremeNote)]);
     if (p.hitBasis) pills.push(['Odds', escc(p.hitBasis)]);
     if (p.iv) pills.push(['IV', escc(p.iv)]);
     if (p.live && p.delta) pills.push(['Delta', escc(p.delta)]);
