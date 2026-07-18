@@ -1199,6 +1199,7 @@ function renderHCM() {
     if (p.live && p.delta) pills.push(['Delta', escc(p.delta)]);
     if (p.live && p.openInterest != null) pills.push(['Open int', Number(p.openInterest).toLocaleString('en-US')]);
     if (p.sizeWhy) pills.push(['Sizing', (p.size ? p.size + ' — ' : '') + escc(p.sizeWhy)]);
+    if (p.earningsStale) pills.push(['Earnings data', escc(p.earningsStale).replace('⚠ ', '')]);
     if (p.confirms) pills.push(['Confirms', escc(p.confirms)]);
     var pillHTML = pills.map(function(x) { return '<div class="hcm-ppill"><span class="pp-lab">' + x[0] + '</span><span>' + x[1] + '</span></div>'; }).join('');
     // Full/Half size tag (conviction × crowding) + loud earnings-in-window warning
