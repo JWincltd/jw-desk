@@ -306,6 +306,16 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .th-chip.b-tilt{color:var(--amber);border-color:rgba(176,122,46,.4)}
 .th-chip.b-lean{color:var(--fg-dim)}
 .th-chip.scout{color:#3F8E9B;border-color:rgba(63,142,155,.4)}
+.th-conv{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;padding:3px 8px;border-radius:6px;border:1px solid var(--line);letter-spacing:.02em}
+.th-conv.b-strong{color:var(--positive);border-color:rgba(74,135,98,.4)}
+.th-conv.b-tilt{color:var(--amber);border-color:rgba(176,122,46,.4)}
+.th-conv.b-lean{color:var(--fg-dim)}.th-conv.b-none{color:var(--fg-mute)}
+.th-dlt{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600}
+.th-dlt.up{color:var(--positive)}.th-dlt.dn{color:var(--danger)}.th-dlt.flat{color:var(--fg-mute)}
+.th-bandword{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-mute)}
+.th-why{display:flex;gap:7px;align-items:baseline;font-size:12px;color:var(--fg-dim);line-height:1.45;padding:2px 0}
+.th-why .dot{width:7px;height:7px;border-radius:99px;flex:none;position:relative;top:1px}
+.th-why .dot.band{background:#3F8E9B}.th-why .dot.market{background:var(--amber)}.th-why .dot.supporting{background:var(--positive)}.th-why .dot.contradicting{background:var(--danger)}.th-why .dot.earnings{background:var(--amber)}.th-why .dot.milestone{background:var(--positive)}.th-why .dot.evidence{background:var(--fg-mute)}
 .th-meta{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--fg-mute);margin-top:4px;display:flex;gap:14px;flex-wrap:wrap}
 .th-meta .up{color:var(--positive)}.th-meta .dn{color:var(--danger)}
 .th-detail{display:none;margin-top:10px}
@@ -776,7 +786,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   </div>
   <div class="foot">
     <div class="top"><span class="lab" id="footDate">Mon, Jul 13, 2026, 06:55 AM ET</span><button class="redo" onclick="location.reload()">↺ replay briefing</button></div>
-    <p class="disclaimer"><b style="color:var(--fg-dim)">Internal research note — not investment advice.</b> A coverage-universe scan narrowed to overnight movers, one analyst agent per surviving name, synthesized by a CIO pass. Sparklines and the ticker are illustrative (no intraday tick data on this feed). Conviction bands are ordinal and uncalibrated; no probabilities, no position sizing. Options plays express the desk&#8217;s directional calls; the strike, expiry, premium and implied volatility are pulled from the live options chain as of the pre-open snapshot (premiums are indicative, not executable quotes). When the options feed is unavailable a card falls back to a structural note without contract detail.</p>
+    <p class="disclaimer"><b style="color:var(--fg-dim)">Internal research note — not investment advice.</b> A coverage-universe scan narrowed to overnight movers, one analyst agent per surviving name, synthesized by a CIO pass. Sparklines and the ticker are illustrative (no intraday tick data on this feed). The conviction index (0&#8211;100) is a transparent, fixed-formula blend of the structural band, the recency-weighted balance of supporting vs contradicting evidence, and market confirmation vs SPY &#8212; an index for tracking how a thesis develops, not a probability, and no position sizing. Options plays express the desk&#8217;s directional calls; the strike, expiry, premium and implied volatility are pulled from the live options chain as of the pre-open snapshot (premiums are indicative, not executable quotes). When the options feed is unavailable a card falls back to a structural note without contract detail.</p>
     <div class="prov" id="pProv"></div>
   </div>
 </div>
@@ -1333,6 +1343,8 @@ function renderTheses() {
   // live performer (basket vs SPY) leads, then the newest — so a working lean idea isn't buried.
   var THRANK = { strong: 0, tilt: 1, lean: 2, none: 3 };
   list.sort(function(a, b) {
+    var ca = a.conviction ? a.conviction.index : null, cb = b.conviction ? b.conviction.index : null;
+    if (ca != null && cb != null && cb !== ca) return cb - ca;   // higher conviction index to the top
     var ra = THRANK[a.band] != null ? THRANK[a.band] : 3, rb = THRANK[b.band] != null ? THRANK[b.band] : 3;
     if (ra !== rb) return ra - rb;
     var pa = (a.performance && a.performance.excessPct != null) ? a.performance.excessPct : -Infinity;
@@ -1349,6 +1361,15 @@ function renderTheses() {
   }
 
   var bandChip = (b) => '<span class="th-chip b-' + escc(b) + '">' + escc(b) + '</span>';
+  var dArrow = function(v) { if (v == null) return ''; var c = v > 0 ? 'up' : v < 0 ? 'dn' : 'flat'; var g = v > 0 ? '▲' : v < 0 ? '▼' : '·'; return '<span class="th-dlt ' + c + '">' + g + ' ' + (v > 0 ? '+' : '') + v + '</span>'; };
+  var dTxt = function(v) { return v == null ? '—' : (v > 0 ? '+' : '') + v; };
+  var sparkSVG = function(a) {
+    if (!a || a.length < 2) return '';
+    var w = 60, h = 16, lo = Math.min.apply(null, a), hi = Math.max.apply(null, a), rng = (hi - lo) || 1;
+    var pts = a.map(function(v, i) { return (i / (a.length - 1) * w).toFixed(1) + ',' + (h - (v - lo) / rng * h).toFixed(1); }).join(' ');
+    var up = a[a.length - 1] >= a[0];
+    return '<svg class="th-spark" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '"><polyline fill="none" stroke="' + (up ? 'var(--positive)' : 'var(--danger)') + '" stroke-width="1.5" points="' + pts + '"/></svg>';
+  };
   var rows = list.map(function(t, i) {
     var p = t.performance;
     var perf = p && p.excessPct != null ?
@@ -1366,13 +1387,20 @@ function renderTheses() {
     ].filter(Boolean).map(function(x) { return '<div class="th-pill"><span class="pp-lab">' + x[0] + '</span><span>' + escc(x[1]) + '</span></div>'; }).join('');
     return '<div class="th-card">' +
       '<div class="th-top"><span class="th-title">' + escc(t.title) + '</span></div>' +
-      '<div class="th-badges"><div class="th-badges-l">' + bandChip(t.band) +
+      '<div class="th-badges"><div class="th-badges-l">' +
+      (t.conviction ? '<span class="th-conv b-' + escc(t.conviction.band) + '">' + t.conviction.index + '%</span>' + dArrow(t.conviction.delta.day) + '<span class="th-bandword">' + escc(t.conviction.band) + '</span>' : bandChip(t.band)) +
       (t.origin === 'scout' ? '<span class="th-chip scout">scout</span>' : '') + '</div>' +
       '<button class="hcm-info" data-th="' + i + '">▸ Details</button></div>' +
       (t.theme ? '<div class="th-meta" style="margin-top:2px"><span>theme — ' + escc(t.theme) + '</span></div>' : '') +
       '<div class="th-meta"><span>' + (t.basket || []).map(escc).join(' · ') + '</span>' + perf +
       '<span>' + (t.evidence || []).length + ' evidence item' + ((t.evidence || []).length === 1 ? '' : 's') + '</span></div>' +
-      '<div class="th-detail">' + pills + (ev ? '<div style="margin-top:2px">' + ev + '</div>' : '') + '</div>' +
+      '<div class="th-detail">' + pills +
+        (t.conviction && t.conviction.drivers && t.conviction.drivers.length ?
+          '<div class="th-pill" style="flex-direction:column;align-items:stretch;gap:3px"><span class="pp-lab">Latest move</span>' +
+          t.conviction.drivers.map(function(d) { return '<div class="th-why"><span class="dot ' + escc(d.kind) + '"></span><span>' + escc(d.text) + '</span></div>'; }).join('') + '</div>' : '') +
+        (t.conviction ?
+          '<div class="th-pill"><span class="pp-lab">Trend</span><span>conviction <b>' + t.conviction.index + '%</b> · day ' + dTxt(t.conviction.delta.day) + ' · wk ' + dTxt(t.conviction.delta.week) + ' · mo ' + dTxt(t.conviction.delta.month) + ' &nbsp; ' + sparkSVG(t.conviction.spark) + '</span></div>' : '') +
+        (ev ? '<div style="margin-top:2px">' + ev + '</div>' : '') + '</div>' +
       '</div>';
   }).join('');
 
