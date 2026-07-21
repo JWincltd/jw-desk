@@ -372,6 +372,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-size{font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:5px;border:1px solid var(--line-2);color:var(--fg-dim);white-space:nowrap;flex:none}
 .hcm-size.full{color:var(--positive);border-color:rgba(74,135,98,.35)}
 .hcm-size.half{color:var(--amber);border-color:rgba(176,122,46,.42);background:rgba(176,122,46,.06)}
+.hcm-size.carry{color:var(--fg-dim);border-color:var(--line-2);letter-spacing:.04em}
+.hcm-ext{display:flex;gap:6px;align-items:flex-start;font-size:10.5px;line-height:1.45;color:var(--amber);background:rgba(176,122,46,.07);border:1px solid rgba(176,122,46,.28);border-radius:8px;padding:6px 9px;margin:7px 0 2px}
 .hcm-earn{display:flex;gap:6px;align-items:flex-start;font-size:10.5px;line-height:1.45;color:var(--danger);background:rgba(168,68,44,.07);border:1px solid rgba(168,68,44,.28);border-radius:8px;padding:6px 9px;margin:7px 0 2px}
 /* intraday confirmation overlay */
 .iv-banner{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--fg-dim);background:var(--bg-2);border:1px solid var(--line);border-radius:9px;padding:8px 12px;margin-bottom:12px}
@@ -1138,9 +1140,12 @@ function renderHCM() {
         '</div>';
     }
     const buySize = b.size ? '<span class="hcm-size ' + (b.size === 'Half size' ? 'half' : 'full') + '">' + escc(b.size) + '</span>' : '';
-    return '<div class="hcm-top">' + tlogo(b.symbol, 26) + '<span class="hcm-sym">' + escc(b.symbol) + '</span><span class="tag long">long</span>' + buySize + ivChip('buy', b.symbol) + '<span class="hcm-chg ' + cls(chg) + '">' + pct(chg) + '</span></div>' +
+    const buyCarry = b.carried ? '<span class="hcm-size carry">Day ' + b.carryDay + ' of ' + b.carryOf + '</span>' : '';
+    const buyExt = b.extendedNote ? '<div class="hcm-ext"><span>⚠</span><span>' + escc(b.extendedNote).replace('⚠ ', '') + '</span></div>' : '';
+    return '<div class="hcm-top">' + tlogo(b.symbol, 26) + '<span class="hcm-sym">' + escc(b.symbol) + '</span><span class="tag long">long</span>' + buySize + buyCarry + ivChip('buy', b.symbol) + '<span class="hcm-chg ' + cls(chg) + '">' + pct(chg) + '</span></div>' +
       '<div class="hcm-name">' + escc(b.name) + '</div>' +
       whyNow +
+      buyExt +
       '<div style="display:flex;align-items:center;gap:8px;margin-top:8px">' + accLine + expTag + '</div>' +
       scoreHTML +
       '<div style="margin-top:10px">' + stats + '</div>';
@@ -1205,11 +1210,14 @@ function renderHCM() {
     // Full/Half size tag (conviction × crowding) + loud earnings-in-window warning
     var sizeChip = p.size ? '<span class="hcm-size ' + (p.size === 'Half size' ? 'half' : 'full') + '">' + escc(p.size) + '</span>' : '';
     var earn = p.earningsFlag ? '<div class="hcm-earn"><span>⚠</span><span>' + escc(p.earningsFlag).replace('⚠ ', '') + '</span></div>' : '';
+    var carryChip = p.carried ? '<span class="hcm-size carry">Day ' + p.carryDay + ' of ' + p.carryOf + '</span>' : '';
+    var ext = p.extendedNote ? '<div class="hcm-ext"><span>⚠</span><span>' + escc(p.extendedNote).replace('⚠ ', '') + '</span></div>' : '';
     return '<div class="hcm-play">' +
-      '<div class="hcm-play-top">' + tlogo(p.symbol, 20) + '<span class="hcm-psym">' + p.symbol + '</span><span class="hcm-popt">' + escc(p.play) + '</span>' + sizeChip + '<span class="hcm-pchg ' + cls(p.changePct) + '">' + pct(p.changePct) + '</span></div>' +
+      '<div class="hcm-play-top">' + tlogo(p.symbol, 20) + '<span class="hcm-psym">' + p.symbol + '</span><span class="hcm-popt">' + escc(p.play) + '</span>' + sizeChip + carryChip + '<span class="hcm-pchg ' + cls(p.changePct) + '">' + pct(p.changePct) + '</span></div>' +
       '<div class="hcm-pname">' + escc(p.name) + '</div>' +
       (ivChip(ptype, p.symbol) ? '<div class="iv-row">' + ivChip(ptype, p.symbol) + '</div>' : '') +
       earn +
+      ext +
       meta +
       '<div class="hcm-plevel-row"><span class="hcm-plevel">Key level → ' + escc(p.keyLevel) +
       (p.validThrough ? '<span class="xtag">thru ' + escc(p.validThrough) + '</span>' : '') + '</span><button class="hcm-info">▸ Details</button></div>' +
