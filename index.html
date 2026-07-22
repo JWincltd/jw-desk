@@ -383,6 +383,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-size.full{color:var(--positive);border-color:rgba(74,135,98,.35)}
 .hcm-size.half{color:var(--amber);border-color:rgba(176,122,46,.42);background:rgba(176,122,46,.06)}
 .hcm-size.carry{color:var(--fg-dim);border-color:var(--line-2);letter-spacing:.04em}
+.hcm-size.volgate{color:#3F8E9B;border-color:rgba(63,142,155,.42);background:rgba(63,142,155,.07)}
 .hcm-ext{display:flex;gap:6px;align-items:flex-start;font-size:10.5px;line-height:1.45;color:var(--amber);background:rgba(176,122,46,.07);border:1px solid rgba(176,122,46,.28);border-radius:8px;padding:6px 9px;margin:7px 0 2px}
 .hcm-earn{display:flex;gap:6px;align-items:flex-start;font-size:10.5px;line-height:1.45;color:var(--danger);background:rgba(168,68,44,.07);border:1px solid rgba(168,68,44,.28);border-radius:8px;padding:6px 9px;margin:7px 0 2px}
 /* intraday confirmation overlay */
@@ -1221,9 +1222,10 @@ function renderHCM() {
     var sizeChip = p.size ? '<span class="hcm-size ' + (p.size === 'Half size' ? 'half' : 'full') + '">' + escc(p.size) + '</span>' : '';
     var earn = p.earningsFlag ? '<div class="hcm-earn"><span>⚠</span><span>' + escc(p.earningsFlag).replace('⚠ ', '') + '</span></div>' : '';
     var carryChip = p.carried ? '<span class="hcm-size carry">Day ' + p.carryDay + ' of ' + p.carryOf + '</span>' : '';
+    var volChip = p.volGated ? '<span class="hcm-size volgate" title="Enter only on a close above the level on \u22651.5\u00d7 average volume">Vol gate</span>' : '';
     var ext = p.extendedNote ? '<div class="hcm-ext"><span>⚠</span><span>' + escc(p.extendedNote).replace('⚠ ', '') + '</span></div>' : '';
     return '<div class="hcm-play">' +
-      '<div class="hcm-play-top">' + tlogo(p.symbol, 20) + '<span class="hcm-psym">' + p.symbol + '</span><span class="hcm-popt">' + escc(p.play) + '</span>' + sizeChip + carryChip + '<span class="hcm-pchg ' + cls(p.changePct) + '">' + pct(p.changePct) + '</span></div>' +
+      '<div class="hcm-play-top">' + tlogo(p.symbol, 20) + '<span class="hcm-psym">' + p.symbol + '</span><span class="hcm-popt">' + escc(p.play) + '</span>' + sizeChip + carryChip + volChip + '<span class="hcm-pchg ' + cls(p.changePct) + '">' + pct(p.changePct) + '</span></div>' +
       '<div class="hcm-pname">' + escc(p.name) + '</div>' +
       (ivChip(ptype, p.symbol) ? '<div class="iv-row">' + ivChip(ptype, p.symbol) + '</div>' : '') +
       earn +
