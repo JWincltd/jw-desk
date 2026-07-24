@@ -399,6 +399,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .iv-chip.bad{color:var(--danger);border-color:rgba(168,68,44,.4);background:rgba(168,68,44,.07)}
 .iv-chip.warn{color:var(--amber);border-color:rgba(176,122,46,.42);background:rgba(176,122,46,.06)}
 .iv-chip.neut{color:var(--fg-mute)}
+.iv-note{font-family:'IBM Plex Mono',monospace;font-size:10px;line-height:1.4;color:var(--amber);opacity:.92;margin-top:6px}
 .hcm-plevel-row{display:flex;align-items:center;gap:8px;margin-bottom:0}
 .hcm-info{display:inline-flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-mute);border:1px solid var(--line);border-radius:6px;padding:4px 9px;cursor:pointer;background:none;margin-left:auto;transition:color .15s var(--ease),border-color .15s var(--ease);user-select:none;flex:none}
 .hcm-info:hover{color:var(--fg-dim);border-color:var(--line-2)}
@@ -1272,8 +1273,15 @@ function renderHCM() {
   function ivChip(type, sym) {
     const s = IV && IV.byPlay ? IV.byPlay[type + ':' + sym] : null;
     if (!s || !s.label) return '';
-    const c = /triggered|target/.test(s.status) ? 'good' : /faded|stopped/.test(s.status) ? 'bad' : s.status === 'working' ? 'warn' : 'neut';
-    return '<span class="iv-chip ' + c + '" title="intraday status">' + escc(s.label) + '</span>';
+    const gapped = s.status === 'gapped-through';
+    const c = gapped ? 'warn' : /triggered|target/.test(s.status) ? 'good' : /faded|stopped/.test(s.status) ? 'bad' : s.status === 'working' ? 'warn' : 'neut';
+    return '<span class="iv-chip ' + c + '" title="intraday status">' + (gapped ? '⚠ ' : '') + escc(s.label) + '</span>';
+  }
+  // Where a real second entry is, for a play the price gapped clean past at the open (no takeable fill).
+  function ivNote(type, sym) {
+    const s = IV && IV.byPlay ? IV.byPlay[type + ':' + sym] : null;
+    if (!s || !s.reanchor) return '';
+    return '<div class="iv-note">↳ ' + escc(s.reanchor) + '</div>';
   }
   function ivBanner() {
     if (!IV) return '';
@@ -1321,6 +1329,7 @@ function renderHCM() {
       '<div class="hcm-name">' + escc(b.name) + '</div>' +
       whyNow +
       buyExt +
+      ivNote('buy', b.symbol) +
       '<div style="display:flex;align-items:center;gap:8px;margin-top:8px">' + accLine + expTag + '</div>' +
       scoreHTML +
       '<div style="margin-top:10px">' + stats + '</div>';
@@ -1392,6 +1401,7 @@ function renderHCM() {
       '<div class="hcm-play-top">' + tlogo(p.symbol, 20) + '<span class="hcm-psym">' + p.symbol + '</span><span class="hcm-popt">' + escc(p.play) + '</span>' + sizeChip + carryChip + volChip + '<span class="hcm-pchg ' + cls(p.changePct) + '">' + pct(p.changePct) + '</span></div>' +
       '<div class="hcm-pname">' + escc(p.name) + '</div>' +
       (ivChip(ptype, p.symbol) ? '<div class="iv-row">' + ivChip(ptype, p.symbol) + '</div>' : '') +
+      ivNote(ptype, p.symbol) +
       earn +
       ext +
       meta +
