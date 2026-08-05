@@ -570,9 +570,20 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .dd-h2{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--fg-mute);margin:20px 0 7px}
 .dd-chart{height:320px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
 .dd-charthd{display:flex;align-items:baseline;gap:12px}
-.dd-reset{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--fg-mute);background:none;border:1px solid var(--line);border-radius:6px;padding:3px 8px;cursor:pointer;flex:none;transition:color .15s var(--ease),border-color .15s var(--ease)}
-.dd-reset:hover{color:var(--fg-dim);border-color:var(--line-2)}
+.dd-btn{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--fg-mute);background:none;border:1px solid var(--line);border-radius:6px;padding:3px 8px;cursor:pointer;flex:none;transition:color .15s var(--ease),border-color .15s var(--ease)}
+.dd-btn:hover{color:var(--fg-dim);border-color:var(--line-2)}
 .dd-hint{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--fg-mute);margin-top:6px;letter-spacing:.03em}
+/* Fullscreen chart. Sits ABOVE the firm (64) because it is a modal over whatever page you are on,
+   and below #chatDock (70), which is hidden on this page anyway. Safe-area insets matter: in the
+   Home-Screen app there is no browser chrome, so the header would otherwise sit under the notch. */
+.dd-full{position:fixed;inset:0;z-index:68;background:var(--bg);display:none;flex-direction:column;
+  padding:calc(env(safe-area-inset-top,0px) + 10px) calc(env(safe-area-inset-right,0px) + 12px) calc(env(safe-area-inset-bottom,0px) + 10px) calc(env(safe-area-inset-left,0px) + 12px)}
+.dd-full.on{display:flex}
+.dd-full-hd{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.dd-full-hd > span{font-weight:600;font-size:15px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dd-full-chart{flex:1;min-height:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.dd-full-hint{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--fg-mute);margin-top:8px;letter-spacing:.03em}
+.dd-expand{margin-left:0}
 .dd-next{color:var(--fg-dim);font-size:11.5px;margin:7px 0 0;font-family:'IBM Plex Mono',monospace}
 .dd-tbl{width:100%;border-collapse:collapse;font-size:12.5px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .dd-tbl td,.dd-tbl th{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
@@ -1145,6 +1156,17 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     <div class="rp-list" id="rpList"></div>
   </div>
   <div class="bscrim" id="rpScrim"></div>
+</div>
+
+<!-- ===== fullscreen chart — the only place the chart owns every gesture ===== -->
+<div id="ddFull" class="dd-full">
+  <div class="dd-full-hd">
+    <span id="ddFullTitle"></span>
+    <button class="dd-btn" onclick="ddResetFull()">reset view</button>
+    <button class="dd-btn" onclick="ddCloseFull()">&#10005; close</button>
+  </div>
+  <div id="ddFullChart" class="dd-full-chart"></div>
+  <div class="dd-full-hint">drag to pan in both directions &middot; pinch or wheel to zoom &middot; drag the price axis to stretch prices, the date axis to stretch time</div>
 </div>
 
 <!-- ===== Ask the desk ===== -->
@@ -2624,9 +2646,10 @@ function ddCardHTML(d, i){
   h += '<div class="dd-tldr"><b>TL;DR</b> — ' + ddEsc(c.tldr) + '<br><b>Read:</b> ' + ddEsc(c.read) + '</div>';
   h += ddTradeHTML(c.setup);
   h += '<div class="dd-h2 dd-charthd">Chart — daily, levels drawn as cited'
-    + '<button class="dd-reset" onclick="ddResetChart(' + i + ')" title="fit the bars back into frame and re-enable auto price scaling">reset view</button></div>'
+    + '<button class="dd-btn dd-expand" onclick="ddOpenFull(' + i + ')" title="open the chart fullscreen, where dragging pans prices as well as dates">expand &#8599;</button>'
+    + '<button class="dd-btn dd-reset" onclick="ddResetChart(' + i + ')" title="fit the bars back into frame and re-enable auto price scaling">reset view</button></div>'
     + '<div class="dd-chart" id="ddch-' + i + '"></div>'
-    + '<div class="dd-hint">drag to pan · wheel or pinch to zoom · drag the price axis up/down to stretch prices, the date axis left/right to stretch time · reset view puts it back</div>';
+    + '<div class="dd-hint">drag to pan dates · drag the price axis to stretch prices · expand for fullscreen, where dragging pans prices too</div>';
   h += '<div class="dd-next">' + (d.earnings && d.earnings.date ? '⬥ next earnings ' + d.earnings.date + (d.earnings.hour ? ' (' + d.earnings.hour + ')' : '') + (d.earnings.epsEstimate != null ? ' · consensus EPS $' + d.earnings.epsEstimate : '') : d.earnings && d.earnings.unavailable ? 'earnings calendar unavailable' : 'no earnings in window (calendar checked)') + '</div>';
   h += '<div class="dd-h2">Snapshot</div><table class="dd-tbl"><tr><th>Signal</th><th>Value</th><th>Read</th><th>Bias</th></tr>';
   (d.snapshotRows || []).forEach(function(r){ h += '<tr><td class="dd-mono">' + ddEsc(r.signal) + '</td><td class="dd-mono">' + ddEsc(r.value) + '</td><td>' + ddEsc(r.read) + '</td><td>' + r.bias + '</td></tr>'; });
@@ -2643,31 +2666,129 @@ function ddCardHTML(d, i){
     + '<br><b>Trigger:</b> ' + ddEsc(c.bottomLine.trigger) + ' · <b>Invalidation:</b> ' + ddMoney(c.bottomLine.invalidation) + '</div>';
   return h + '</div>';
 }
-var ddCharts = {};
-// TOUCH BRIDGE FOR THE AXES.
+var ddCharts = {}, ddFull = null;
+
+// ---- WHO OWNS THE PRICE SCALE -----------------------------------------------------------------
+// The library has no vertical pan and no public price-range setter. The one lever it does give is
+// `autoscaleInfoProvider`: a series may dictate the range the chart autoscales to. Pin a window
+// there and panning becomes "shift the window", stretching becomes "scale it about its centre".
 //
-// Dragging an axis is how you stretch it, and the library option that enables it is called
-// `axisPressedMouseMove` — which means that literally. It listens for MOUSE events. On a tablet the
-// price axis therefore does nothing at all: you can pan months across the chart body, because that
-// path handles touch, but the prices will not move.
+// Two things were measured before this was written, because both decide the design:
+//   1. Zeroing scaleMargins while pinned makes a requested window map 1:1 onto the pane — drift
+//      under one pixel. Without that the library re-pads the range and every gesture would need
+//      calibrating against a moving target.
+//   2. The library's own axis stretch sets autoScale:false, and from that moment the pin is
+//      IGNORED. Stretch and pan cannot be split between the library and us — whoever owns one must
+//      own both, or panning silently dies the first time you stretch. So `axisPressedMouseMove.price`
+//      is off and the price axis is ours end to end. Time is still entirely the library's.
+function ddPriceWindow(chart, series, el){
+  var pin = null;
+  var MARGINS = { top: 0.2, bottom: 0.1 };            // the library's defaults, restored on reset
+  var apply = function(){
+    series.applyOptions({ autoscaleInfoProvider: function(orig){
+      return pin ? { priceRange: { minValue: pin.lo, maxValue: pin.hi } } : orig();
+    } });
+  };
+  apply();
+  // The pane is the element MINUS the date axis. Measuring against the element instead puts every
+  // conversion out by the axis height, which reads as a slow drift while you drag.
+  var paneH = function(){
+    var th = 0; try { th = chart.timeScale().height(); } catch (e) {}
+    return Math.max(1, el.clientHeight - th);
+  };
+  var api = {
+    pinned: function(){ return !!pin; },
+    // Take over from whatever is on screen right now, so the first gesture never jumps the view.
+    take: function(){
+      if (pin) return pin;
+      var h = paneH(), hi = series.coordinateToPrice(0), lo = series.coordinateToPrice(h);
+      if (hi == null || lo == null || !(hi > lo)) return null;
+      series.priceScale().applyOptions({ scaleMargins: { top: 0, bottom: 0 } });
+      pin = { lo: lo, hi: hi };
+      apply();
+      return pin;
+    },
+    shift: function(dPrice){ if (pin && isFinite(dPrice)) { pin = { lo: pin.lo + dPrice, hi: pin.hi + dPrice }; apply(); } },
+    scale: function(k){
+      if (!pin || !isFinite(k) || k <= 0) return;
+      var c = (pin.lo + pin.hi) / 2, half = (pin.hi - pin.lo) / 2 * k;
+      if (!(half > 0) || !isFinite(half)) return;      // a degenerate window would divide by zero later
+      pin = { lo: c - half, hi: c + half }; apply();
+    },
+    perPixel: function(){ return pin ? (pin.hi - pin.lo) / paneH() : 0; },
+    reset: function(){ pin = null; apply(); series.priceScale().applyOptions({ scaleMargins: MARGINS }); },
+  };
+  return api;
+}
+
+// ---- gestures on the price scale --------------------------------------------------------------
+// One implementation for mouse and touch, because the split between them is what shipped the axis
+// broken on a tablet last time.
 //
-// Measured before writing this: a synthetic mousedown/mousemove/mouseup on the axis DOES drive the
-// library's own scaling (autoScale flips true → false), while synthetic pointer events do nothing.
-// The public price-scale API is only applyOptions/options/width — there is no setVisibleRange — so
-// reimplementing the scaling maths was not an option. Translating an axis touch into the mouse
-// events the library is already listening for reuses its own, correct code path.
-//
-// Only the axis strips are claimed. A touch on the chart body is left alone, so horizontal panning
-// and pinch still belong to the library and a vertical swipe still scrolls the page.
-function ddAxisTouch(el, chart){
-  var live = null;
-  var strip = function(t){
+// panOnTouch is the whole inline-vs-fullscreen difference. Inline it is OFF: a vertical swipe over
+// a 320px card must still scroll the page, or the card becomes a hole you cannot get past. In the
+// fullscreen overlay there is no page to scroll, so the chart takes the gesture.
+function ddGestures(el, chart, win, o){
+  o = o || {};
+  var drag = null;
+  var strip = function(x, y){
     var r = el.getBoundingClientRect(), pw = 0, th = 0;
     try { pw = chart.priceScale('right').width(); } catch (e) {}
     try { th = chart.timeScale().height(); } catch (e) {}
-    if (pw && t.clientX >= r.right - pw) return 'price';
-    if (th && t.clientY >= r.bottom - th) return 'time';
-    return null;
+    if (pw && x >= r.right - pw) return 'price';
+    if (th && y >= r.bottom - th) return 'time';
+    return 'body';
+  };
+  var begin = function(x, y, touch){
+    var kind = strip(x, y);
+    if (kind === 'time') return null;                                  // the date axis stays the library's
+    if (kind === 'body' && touch && !o.panOnTouch) return null;        // inline swipe = page scroll
+    return { kind: kind, y0: y, y: y, touch: touch, armed: false, moved: 0 };
+  };
+  // Arming on the first few pixels of VERTICAL movement is what keeps an ordinary horizontal pan
+  // from silently taking the price scale off auto.
+  var move = function(y){
+    if (!drag) return;
+    drag.moved = Math.max(drag.moved, Math.abs(y - drag.y0));
+    if (!drag.armed) {
+      if (Math.abs(y - drag.y0) < 4) return;
+      if (!win.take()) { drag = null; return; }
+      drag.armed = true; drag.y = y; return;
+    }
+    var dy = y - drag.y; drag.y = y;
+    if (!dy) return;
+    if (drag.kind === 'price') win.scale(1 + dy / Math.max(80, el.clientHeight));   // down = show more
+    else win.shift(dy * win.perPixel());                                            // content follows the finger
+  };
+  el.addEventListener('mousedown', function(e){ if (e.button === 0) drag = begin(e.clientX, e.clientY, false); });
+  window.addEventListener('mousemove', function(e){ if (drag) move(e.clientY); });
+  window.addEventListener('mouseup', function(){ drag = null; });
+  el.addEventListener('touchstart', function(e){
+    drag = e.touches.length === 1 ? begin(e.touches[0].clientX, e.touches[0].clientY, true) : null;
+  }, { passive: false });
+  el.addEventListener('touchmove', function(e){
+    if (!drag || e.touches.length !== 1) return;
+    if (drag.armed || Math.abs(e.touches[0].clientY - drag.y0) >= 4) e.preventDefault();
+    move(e.touches[0].clientY);
+  }, { passive: false });
+  var end = function(){ drag = null; };
+  el.addEventListener('touchend', end, { passive: false });
+  el.addEventListener('touchcancel', end, { passive: false });
+  // Double-click the price axis to hand it back, matching what the library does for the date axis.
+  el.addEventListener('dblclick', function(e){ if (strip(e.clientX, e.clientY) === 'price') win.reset(); });
+}
+
+// TOUCH BRIDGE FOR THE DATE AXIS ONLY.
+// `axisPressedMouseMove` means that literally — it listens for MOUSE events, so on a tablet the
+// date axis is inert. Measured: synthetic mouse events on it DO drive the library's own scaling;
+// synthetic pointer events do nothing. The price axis no longer needs this — it is handled above.
+function ddAxisTouch(el, chart){
+  var live = null;
+  var onTime = function(t){
+    var r = el.getBoundingClientRect(), th = 0, pw = 0;
+    try { th = chart.timeScale().height(); } catch (e) {}
+    try { pw = chart.priceScale('right').width(); } catch (e) {}
+    return th && t.clientY >= r.bottom - th && !(pw && t.clientX >= r.right - pw);
   };
   var fire = function(type, t, buttons){
     (live && live.target ? live.target : el).dispatchEvent(new MouseEvent(type, {
@@ -2675,96 +2796,128 @@ function ddAxisTouch(el, chart){
   };
   el.addEventListener('touchstart', function(e){
     live = null;
-    if (e.touches.length !== 1) return;                    // two fingers is a pinch — the library's
+    if (e.touches.length !== 1) return;                 // two fingers is a pinch, the library's own
     var t = e.touches[0];
-    if (!strip(t)) return;
+    if (!onTime(t)) return;
     live = { target: document.elementFromPoint(t.clientX, t.clientY) || el };
     fire('mousedown', t, 1);
   }, { passive: false });
   el.addEventListener('touchmove', function(e){
     if (!live || e.touches.length !== 1) return;
-    e.preventDefault();                                     // an axis drag is not a page scroll
+    e.preventDefault();
     fire('mousemove', e.touches[0], 1);
   }, { passive: false });
   var end = function(e){
     if (!live) return;
-    var t = (e.changedTouches && e.changedTouches[0]) || { clientX: 0, clientY: 0 };
-    fire('mouseup', t, 0);
+    fire('mouseup', (e.changedTouches && e.changedTouches[0]) || { clientX: 0, clientY: 0 }, 0);
     live = null;
   };
   el.addEventListener('touchend', end, { passive: false });
   el.addEventListener('touchcancel', end, { passive: false });
 }
-// Pan and zoom are per-chart state with no undo, so every card carries its own way back to the
-// view it was published with: fit the bars back into frame and hand the price axis back to auto.
+
+// ---- one chart builder, used by the card and by the fullscreen overlay -------------------------
+function ddBuildChart(el, d, o){
+  o = o || {};
+  var LW = window.LightweightCharts;
+  var chart = LW.createChart(el, {
+    layout: { background: { color: '#ffffff' }, textColor: DD_C.mute, fontFamily: "'IBM Plex Mono',monospace" },
+    grid: { vertLines: { color: DD_C.grid }, horzLines: { color: DD_C.grid } },
+    rightPriceScale: { borderColor: DD_C.grid }, timeScale: { borderColor: DD_C.grid },
+    width: el.clientWidth, height: el.clientHeight,
+    // vertTouchDrag stays OFF even in the overlay: vertical touch is our price pan, not the
+    // library's kinetic time scroll. axisPressedMouseMove.price is off because we own that axis.
+    handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+    handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: { time: true, price: false }, axisDoubleClickReset: { time: true, price: false } },
+    crosshair: { mode: LW.CrosshairMode ? LW.CrosshairMode.Normal : 0 },
+  });
+  var s = chart.addCandlestickSeries({ upColor: DD_C.pos, downColor: DD_C.neg, borderVisible: false, wickUpColor: DD_C.pos, wickDownColor: DD_C.neg });
+  var candles = d.bars.map(function(b){ return { time: b[0], open: b[1], high: b[2], low: b[3], close: b[4] }; });
+  var eDate = d.earnings && d.earnings.date;
+  if (eDate && eDate > d.tech.date) candles.push({ time: eDate });
+  s.setData(candles);
+  if (eDate && eDate > d.tech.date) s.setMarkers([{ time: eDate, position: 'aboveBar', color: DD_C.amber, shape: 'circle', text: 'earnings' }]);
+  var su = d.card.setup || {};
+  var roleMap = { entry: DD_C.link, stop: DD_C.neg, target: DD_C.pos };
+  var roleOf = function(price){
+    if (su.stance !== 'long' && su.stance !== 'short') return null;
+    for (var k in roleMap) if (su[k] != null && Math.abs(su[k] - price) / price < 0.005) return { k: k, col: roleMap[k] };
+    return null;
+  };
+  (d.levels || []).forEach(function(l){
+    var r = roleOf(l.price);
+    s.createPriceLine(r
+      ? { price: l.price, color: r.col, lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: ddRoleTag(r.k, su.stance) + ' ' + ddMoney(l.price) }
+      : { price: l.price, color: l.type === 'support' ? DD_C.pos : DD_C.neg, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: (l.type === 'support' ? 'S ' : 'R ') + ddMoney(l.price) });
+  });
+  // a setup price sitting on spot rather than on a level has no level line to promote,
+  // so it is drawn directly (same as chartHTML in jw-brief/src/deep-dive.js)
+  if (su.stance === 'long' || su.stance === 'short') {
+    for (var k2 in roleMap) {
+      (function(k){
+        if (su[k] == null) return;
+        var onLvl = (d.levels || []).some(function(l){ return Math.abs(l.price - su[k]) / l.price < 0.005; });
+        if (!onLvl) s.createPriceLine({ price: su[k], color: roleMap[k], lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: ddRoleTag(k, su.stance) + ' ' + ddMoney(su[k]) });
+      })(k2);
+    }
+  }
+  chart.timeScale().fitContent();
+  var win = ddPriceWindow(chart, s, el);
+  ddGestures(el, chart, win, { panOnTouch: !!o.panOnTouch });
+  ddAxisTouch(el, chart);
+  return { chart: chart, series: s, win: win, el: el };
+}
+
 function ddResetChart(i){
   var c = ddCharts[i]; if (!c) return;
-  c.timeScale().fitContent();
-  try { c.priceScale('right').applyOptions({ autoScale: true }); } catch (e) {}
+  c.chart.timeScale().fitContent();
+  c.win.reset();
 }
+
 function mountDDChart(d, i){
   var el = $('ddch-' + i); if (!el || el.dataset.mounted || !(d.bars && d.bars.length)) return;
   el.dataset.mounted = '1';
   loadLW().then(function(){
     el.innerHTML = '';                                   // clear any earlier failure note
-    var LW = window.LightweightCharts;
-    var chart = LW.createChart(el, {
-      layout: { background: { color: '#ffffff' }, textColor: DD_C.mute, fontFamily: "'IBM Plex Mono',monospace" },
-      grid: { vertLines: { color: DD_C.grid }, horzLines: { color: DD_C.grid } },
-      rightPriceScale: { borderColor: DD_C.grid }, timeScale: { borderColor: DD_C.grid },
-      // Interactive, the way a TradingView chart is: wheel or pinch to zoom, drag to pan, drag
-      // either axis to stretch just that axis, double-click an axis to reset it.
-      //
-      // vertTouchDrag stays OFF deliberately. With it on, a vertical swipe anywhere over the chart
-      // is swallowed by the chart's own kinetic scroll — on a phone the card is 320px of dead zone
-      // you cannot scroll past. Horizontal drag pans, pinch zooms, and vertical still scrolls the
-      // page; the reset button and the axis drag cover what vertTouchDrag would have given.
-      handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
-      handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true, axisDoubleClickReset: true },
-      crosshair: { mode: LW.CrosshairMode ? LW.CrosshairMode.Normal : 0 },
-    });
-    var s = chart.addCandlestickSeries({ upColor: DD_C.pos, downColor: DD_C.neg, borderVisible: false, wickUpColor: DD_C.pos, wickDownColor: DD_C.neg });
-    var candles = d.bars.map(function(b){ return { time: b[0], open: b[1], high: b[2], low: b[3], close: b[4] }; });
-    var eDate = d.earnings && d.earnings.date;
-    if (eDate && eDate > d.tech.date) candles.push({ time: eDate });
-    s.setData(candles);
-    if (eDate && eDate > d.tech.date) s.setMarkers([{ time: eDate, position: 'aboveBar', color: DD_C.amber, shape: 'circle', text: 'earnings' }]);
-    var su = d.card.setup || {};
-    var roleMap = { entry: DD_C.link, stop: DD_C.neg, target: DD_C.pos };
-    var roleOf = function(price){
-      if (su.stance !== 'long' && su.stance !== 'short') return null;
-      for (var k in roleMap) if (su[k] != null && Math.abs(su[k] - price) / price < 0.005) return { k: k, col: roleMap[k] };
-      return null;
-    };
-    (d.levels || []).forEach(function(l){
-      var r = roleOf(l.price);
-      s.createPriceLine(r
-        ? { price: l.price, color: r.col, lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: ddRoleTag(r.k, su.stance) + ' ' + ddMoney(l.price) }
-        : { price: l.price, color: l.type === 'support' ? DD_C.pos : DD_C.neg, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: (l.type === 'support' ? 'S ' : 'R ') + ddMoney(l.price) });
-    });
-    // a setup price sitting on spot rather than on a level has no level line to promote,
-    // so it is drawn directly (same as chartHTML in jw-brief/src/deep-dive.js)
-    if (su.stance === 'long' || su.stance === 'short') {
-      for (var k2 in roleMap) {
-        (function(k){
-          if (su[k] == null) return;
-          var onLvl = (d.levels || []).some(function(l){ return Math.abs(l.price - su[k]) / l.price < 0.005; });
-          if (!onLvl) s.createPriceLine({ price: su[k], color: roleMap[k], lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: ddRoleTag(k, su.stance) + ' ' + ddMoney(su[k]) });
-        })(k2);
-      }
-    }
-    chart.timeScale().fitContent();
-    ddCharts[i] = chart;                                   // so the reset button can reach it
-    ddAxisTouch(el, chart);                                // axis drags work on touch, not just mouse
+    var c = ddBuildChart(el, d, { panOnTouch: false });  // inline: a vertical swipe still scrolls the page
+    ddCharts[i] = c;
     // Keep the chart sized to its container — but do NOT refit on resize any more. The chart is
     // pannable now, and a mobile browser fires resize when its URL bar collapses mid-gesture,
     // which would throw away the zoom the reader just set.
-    new ResizeObserver(function(){ chart.applyOptions({ width: el.clientWidth }); }).observe(el);
+    new ResizeObserver(function(){ c.chart.applyOptions({ width: el.clientWidth }); }).observe(el);
   }).catch(function(){
     delete el.dataset.mounted;                            // transient CDN failure — allow a retry next entry
     el.innerHTML = '<div style="padding:20px;color:var(--fg-mute);font-size:12px">chart unavailable offline — levels are in the table below</div>';
   });
 }
+
+// ---- fullscreen ------------------------------------------------------------------------------
+// A second chart instance rather than moving the mounted one through the DOM: re-parenting a live
+// canvas chart is not a supported operation, and a fresh instance disposed on close cannot leave
+// the card's chart in a half-migrated state.
+function ddOpenFull(i){
+  var d = DD[i]; if (!d || !(d.bars && d.bars.length)) return;
+  var host = $('ddFullChart'), wrap = $('ddFull');
+  if (!host || !wrap) return;
+  loadLW().then(function(){
+    ddCloseFull();
+    wrap.classList.add('on');
+    $('ddFullTitle').textContent = d.sym + ' — ' + d.name;
+    host.innerHTML = '';
+    // built AFTER the overlay is shown, so clientWidth/Height are real rather than zero
+    ddFull = ddBuildChart(host, d, { panOnTouch: true });
+    new ResizeObserver(function(){
+      if (ddFull) ddFull.chart.applyOptions({ width: host.clientWidth, height: host.clientHeight });
+    }).observe(host);
+  }).catch(function(){});
+}
+function ddCloseFull(){
+  if (ddFull) { try { ddFull.chart.remove(); } catch (e) {} ddFull = null; }
+  var wrap = $('ddFull'); if (wrap) wrap.classList.remove('on');
+  var host = $('ddFullChart'); if (host) host.innerHTML = '';
+}
+function ddResetFull(){ if (ddFull) { ddFull.chart.timeScale().fitContent(); ddFull.win.reset(); } }
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') ddCloseFull(); });
 /* ---------- live quotes on the swing strat cards (Finnhub, key device-local) ----------
    Same source, same key, same 30s cadence, same markup and .hcm-live styling as the conviction
    card. jwLive could not be reused: it is a singleton bound to #hcmLive and ONE symbol, and this
@@ -3300,7 +3453,7 @@ window.addEventListener('resize', function() {
   document.addEventListener('touchstart', function(e){
     sy = null;
     if (e.touches.length !== 1) return;
-    if (e.target.closest('#chatDock, #thComposeDock, #hcmBuyCard, #hero, .dd-chart')) return;
+    if (e.target.closest('#chatDock, #thComposeDock, #hcmBuyCard, #hero, .dd-chart, #ddFull')) return;
     var sc = activeScroller();
     var top = sc === document.scrollingElement ? window.scrollY : (sc.scrollTop || 0);
     if (top > 2) return;
