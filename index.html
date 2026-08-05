@@ -2626,7 +2626,7 @@ function ddCardHTML(d, i){
   h += '<div class="dd-h2 dd-charthd">Chart — daily, levels drawn as cited'
     + '<button class="dd-reset" onclick="ddResetChart(' + i + ')" title="fit the bars back into frame and re-enable auto price scaling">reset view</button></div>'
     + '<div class="dd-chart" id="ddch-' + i + '"></div>'
-    + '<div class="dd-hint">drag to pan · wheel or pinch to zoom · drag an axis to stretch it · double-click an axis to reset it</div>';
+    + '<div class="dd-hint">drag to pan · wheel or pinch to zoom · drag the price axis up/down to stretch prices, the date axis left/right to stretch time · reset view puts it back</div>';
   h += '<div class="dd-next">' + (d.earnings && d.earnings.date ? '⬥ next earnings ' + d.earnings.date + (d.earnings.hour ? ' (' + d.earnings.hour + ')' : '') + (d.earnings.epsEstimate != null ? ' · consensus EPS $' + d.earnings.epsEstimate : '') : d.earnings && d.earnings.unavailable ? 'earnings calendar unavailable' : 'no earnings in window (calendar checked)') + '</div>';
   h += '<div class="dd-h2">Snapshot</div><table class="dd-tbl"><tr><th>Signal</th><th>Value</th><th>Read</th><th>Bias</th></tr>';
   (d.snapshotRows || []).forEach(function(r){ h += '<tr><td class="dd-mono">' + ddEsc(r.signal) + '</td><td class="dd-mono">' + ddEsc(r.value) + '</td><td>' + ddEsc(r.read) + '</td><td>' + r.bias + '</td></tr>'; });
@@ -2644,6 +2644,57 @@ function ddCardHTML(d, i){
   return h + '</div>';
 }
 var ddCharts = {};
+// TOUCH BRIDGE FOR THE AXES.
+//
+// Dragging an axis is how you stretch it, and the library option that enables it is called
+// `axisPressedMouseMove` — which means that literally. It listens for MOUSE events. On a tablet the
+// price axis therefore does nothing at all: you can pan months across the chart body, because that
+// path handles touch, but the prices will not move.
+//
+// Measured before writing this: a synthetic mousedown/mousemove/mouseup on the axis DOES drive the
+// library's own scaling (autoScale flips true → false), while synthetic pointer events do nothing.
+// The public price-scale API is only applyOptions/options/width — there is no setVisibleRange — so
+// reimplementing the scaling maths was not an option. Translating an axis touch into the mouse
+// events the library is already listening for reuses its own, correct code path.
+//
+// Only the axis strips are claimed. A touch on the chart body is left alone, so horizontal panning
+// and pinch still belong to the library and a vertical swipe still scrolls the page.
+function ddAxisTouch(el, chart){
+  var live = null;
+  var strip = function(t){
+    var r = el.getBoundingClientRect(), pw = 0, th = 0;
+    try { pw = chart.priceScale('right').width(); } catch (e) {}
+    try { th = chart.timeScale().height(); } catch (e) {}
+    if (pw && t.clientX >= r.right - pw) return 'price';
+    if (th && t.clientY >= r.bottom - th) return 'time';
+    return null;
+  };
+  var fire = function(type, t, buttons){
+    (live && live.target ? live.target : el).dispatchEvent(new MouseEvent(type, {
+      bubbles: true, cancelable: true, clientX: t.clientX, clientY: t.clientY, button: 0, buttons: buttons }));
+  };
+  el.addEventListener('touchstart', function(e){
+    live = null;
+    if (e.touches.length !== 1) return;                    // two fingers is a pinch — the library's
+    var t = e.touches[0];
+    if (!strip(t)) return;
+    live = { target: document.elementFromPoint(t.clientX, t.clientY) || el };
+    fire('mousedown', t, 1);
+  }, { passive: false });
+  el.addEventListener('touchmove', function(e){
+    if (!live || e.touches.length !== 1) return;
+    e.preventDefault();                                     // an axis drag is not a page scroll
+    fire('mousemove', e.touches[0], 1);
+  }, { passive: false });
+  var end = function(e){
+    if (!live) return;
+    var t = (e.changedTouches && e.changedTouches[0]) || { clientX: 0, clientY: 0 };
+    fire('mouseup', t, 0);
+    live = null;
+  };
+  el.addEventListener('touchend', end, { passive: false });
+  el.addEventListener('touchcancel', end, { passive: false });
+}
 // Pan and zoom are per-chart state with no undo, so every card carries its own way back to the
 // view it was published with: fit the bars back into frame and hand the price axis back to auto.
 function ddResetChart(i){
@@ -2704,6 +2755,7 @@ function mountDDChart(d, i){
     }
     chart.timeScale().fitContent();
     ddCharts[i] = chart;                                   // so the reset button can reach it
+    ddAxisTouch(el, chart);                                // axis drags work on touch, not just mouse
     // Keep the chart sized to its container — but do NOT refit on resize any more. The chart is
     // pannable now, and a mobile browser fires resize when its URL bar collapses mid-gesture,
     // which would throw away the zoom the reader just set.
