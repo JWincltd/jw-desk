@@ -569,6 +569,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .dd-tldr{font-size:14px;background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:12px 15px}
 .dd-h2{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--fg-mute);margin:20px 0 7px}
 .dd-chart{height:320px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.dd-charthd{display:flex;align-items:baseline;gap:12px}
+.dd-reset{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--fg-mute);background:none;border:1px solid var(--line);border-radius:6px;padding:3px 8px;cursor:pointer;flex:none;transition:color .15s var(--ease),border-color .15s var(--ease)}
+.dd-reset:hover{color:var(--fg-dim);border-color:var(--line-2)}
+.dd-hint{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--fg-mute);margin-top:6px;letter-spacing:.03em}
 .dd-next{color:var(--fg-dim);font-size:11.5px;margin:7px 0 0;font-family:'IBM Plex Mono',monospace}
 .dd-tbl{width:100%;border-collapse:collapse;font-size:12.5px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .dd-tbl td,.dd-tbl th{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
@@ -2589,11 +2593,17 @@ var DD_C = { pos:'#4A8762', neg:'#A8442C', amber:'#B07A2E', link:'#2563eb', grid
 function ddEsc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 function ddMoney(v){ return '$' + (v >= 1000 ? v.toFixed(0) : v.toFixed(2)); }
 function ddBiasColor(b){ return b === 'Bullish' || b === 'Constructive' ? DD_C.pos : b === 'Bearish' ? DD_C.neg : DD_C.amber; }
+// "Buy up to $X" = take it anywhere at or below X, do not chase above. The short mirror is the
+// same instruction flipped: a better short fill is a HIGHER price, so "Short down to $X" means
+// take it at or above X and do not chase below. Labelling a short "Buy up to" would be backwards.
+function ddEntryLabel(stance){ return stance === 'short' ? 'Short down to' : 'Buy up to'; }
+// Chart axis tags are tight, so the same idea in one word.
+function ddRoleTag(k, stance){ return k === 'entry' ? (stance === 'short' ? 'SHORT' : 'BUY') : k.toUpperCase(); }
 function ddTradeHTML(su){
   if (!su) return '';
   if (su.stance === 'long' || su.stance === 'short') {
     return '<div class="dd-trade"><div class="tag" style="background:' + (su.stance === 'long' ? DD_C.pos : DD_C.neg) + '">' + su.stance.toUpperCase() + (su.type ? ' · ' + ddEsc(su.type) : '') + '</div><div class="cells">'
-      + '<div class="cell"><div class="lb">Entry</div><div class="v" style="color:' + DD_C.link + '">' + ddMoney(su.entry) + '</div></div>'
+      + '<div class="cell"><div class="lb">' + ddEntryLabel(su.stance) + '</div><div class="v" style="color:' + DD_C.link + '">' + ddMoney(su.entry) + '</div></div>'
       + '<div class="cell"><div class="lb">Stop</div><div class="v" style="color:' + DD_C.neg + '">' + ddMoney(su.stop) + ' <small>(' + su.riskPct + '%)</small></div></div>'
       + '<div class="cell"><div class="lb">Target</div><div class="v" style="color:' + DD_C.pos + '">' + ddMoney(su.target) + ' <small>(+' + su.rewardPct + '%)</small></div></div>'
       + '<div class="cell"><div class="lb">R / R</div><div class="v">' + su.rr + ':1</div></div>'
@@ -2613,7 +2623,10 @@ function ddCardHTML(d, i){
   h += '<div class="dd-sub">' + ddMoney(d.tech.price) + ' · 1d ' + (d.tech.chg1d != null ? d.tech.chg1d.toFixed(1) : '—') + '% · 21-session ' + (d.tech.chg30d != null ? d.tech.chg30d.toFixed(1) : '—') + '% · as of ' + d.tech.date + '</div>';
   h += '<div class="dd-tldr"><b>TL;DR</b> — ' + ddEsc(c.tldr) + '<br><b>Read:</b> ' + ddEsc(c.read) + '</div>';
   h += ddTradeHTML(c.setup);
-  h += '<div class="dd-h2">Chart — daily, levels drawn as cited</div><div class="dd-chart" id="ddch-' + i + '"></div>';
+  h += '<div class="dd-h2 dd-charthd">Chart — daily, levels drawn as cited'
+    + '<button class="dd-reset" onclick="ddResetChart(' + i + ')" title="fit the bars back into frame and re-enable auto price scaling">reset view</button></div>'
+    + '<div class="dd-chart" id="ddch-' + i + '"></div>'
+    + '<div class="dd-hint">drag to pan · wheel or pinch to zoom · drag an axis to stretch it · double-click an axis to reset it</div>';
   h += '<div class="dd-next">' + (d.earnings && d.earnings.date ? '⬥ next earnings ' + d.earnings.date + (d.earnings.hour ? ' (' + d.earnings.hour + ')' : '') + (d.earnings.epsEstimate != null ? ' · consensus EPS $' + d.earnings.epsEstimate : '') : d.earnings && d.earnings.unavailable ? 'earnings calendar unavailable' : 'no earnings in window (calendar checked)') + '</div>';
   h += '<div class="dd-h2">Snapshot</div><table class="dd-tbl"><tr><th>Signal</th><th>Value</th><th>Read</th><th>Bias</th></tr>';
   (d.snapshotRows || []).forEach(function(r){ h += '<tr><td class="dd-mono">' + ddEsc(r.signal) + '</td><td class="dd-mono">' + ddEsc(r.value) + '</td><td>' + ddEsc(r.read) + '</td><td>' + r.bias + '</td></tr>'; });
@@ -2630,6 +2643,14 @@ function ddCardHTML(d, i){
     + '<br><b>Trigger:</b> ' + ddEsc(c.bottomLine.trigger) + ' · <b>Invalidation:</b> ' + ddMoney(c.bottomLine.invalidation) + '</div>';
   return h + '</div>';
 }
+var ddCharts = {};
+// Pan and zoom are per-chart state with no undo, so every card carries its own way back to the
+// view it was published with: fit the bars back into frame and hand the price axis back to auto.
+function ddResetChart(i){
+  var c = ddCharts[i]; if (!c) return;
+  c.timeScale().fitContent();
+  try { c.priceScale('right').applyOptions({ autoScale: true }); } catch (e) {}
+}
 function mountDDChart(d, i){
   var el = $('ddch-' + i); if (!el || el.dataset.mounted || !(d.bars && d.bars.length)) return;
   el.dataset.mounted = '1';
@@ -2640,7 +2661,17 @@ function mountDDChart(d, i){
       layout: { background: { color: '#ffffff' }, textColor: DD_C.mute, fontFamily: "'IBM Plex Mono',monospace" },
       grid: { vertLines: { color: DD_C.grid }, horzLines: { color: DD_C.grid } },
       rightPriceScale: { borderColor: DD_C.grid }, timeScale: { borderColor: DD_C.grid },
-      handleScroll: false, handleScale: false });
+      // Interactive, the way a TradingView chart is: wheel or pinch to zoom, drag to pan, drag
+      // either axis to stretch just that axis, double-click an axis to reset it.
+      //
+      // vertTouchDrag stays OFF deliberately. With it on, a vertical swipe anywhere over the chart
+      // is swallowed by the chart's own kinetic scroll — on a phone the card is 320px of dead zone
+      // you cannot scroll past. Horizontal drag pans, pinch zooms, and vertical still scrolls the
+      // page; the reset button and the axis drag cover what vertTouchDrag would have given.
+      handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+      handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true, axisDoubleClickReset: true },
+      crosshair: { mode: LW.CrosshairMode ? LW.CrosshairMode.Normal : 0 },
+    });
     var s = chart.addCandlestickSeries({ upColor: DD_C.pos, downColor: DD_C.neg, borderVisible: false, wickUpColor: DD_C.pos, wickDownColor: DD_C.neg });
     var candles = d.bars.map(function(b){ return { time: b[0], open: b[1], high: b[2], low: b[3], close: b[4] }; });
     var eDate = d.earnings && d.earnings.date;
@@ -2657,7 +2688,7 @@ function mountDDChart(d, i){
     (d.levels || []).forEach(function(l){
       var r = roleOf(l.price);
       s.createPriceLine(r
-        ? { price: l.price, color: r.col, lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: r.k.toUpperCase() + ' ' + ddMoney(l.price) }
+        ? { price: l.price, color: r.col, lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: ddRoleTag(r.k, su.stance) + ' ' + ddMoney(l.price) }
         : { price: l.price, color: l.type === 'support' ? DD_C.pos : DD_C.neg, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: (l.type === 'support' ? 'S ' : 'R ') + ddMoney(l.price) });
     });
     // a setup price sitting on spot rather than on a level has no level line to promote,
@@ -2667,13 +2698,16 @@ function mountDDChart(d, i){
         (function(k){
           if (su[k] == null) return;
           var onLvl = (d.levels || []).some(function(l){ return Math.abs(l.price - su[k]) / l.price < 0.005; });
-          if (!onLvl) s.createPriceLine({ price: su[k], color: roleMap[k], lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: k.toUpperCase() + ' ' + ddMoney(su[k]) });
+          if (!onLvl) s.createPriceLine({ price: su[k], color: roleMap[k], lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: ddRoleTag(k, su.stance) + ' ' + ddMoney(su[k]) });
         })(k2);
       }
     }
     chart.timeScale().fitContent();
-    // parity with mountPtChart: keep the chart sized to its container
-    new ResizeObserver(function(){ chart.applyOptions({ width: el.clientWidth }); chart.timeScale().fitContent(); }).observe(el);
+    ddCharts[i] = chart;                                   // so the reset button can reach it
+    // Keep the chart sized to its container — but do NOT refit on resize any more. The chart is
+    // pannable now, and a mobile browser fires resize when its URL bar collapses mid-gesture,
+    // which would throw away the zoom the reader just set.
+    new ResizeObserver(function(){ chart.applyOptions({ width: el.clientWidth }); }).observe(el);
   }).catch(function(){
     delete el.dataset.mounted;                            // transient CDN failure — allow a retry next entry
     el.innerHTML = '<div style="padding:20px;color:var(--fg-mute);font-size:12px">chart unavailable offline — levels are in the table below</div>';
@@ -2774,7 +2808,11 @@ function closeBstratToThesis(){ $('bstrat').classList.remove('shown'); window.sc
 // diagonal scroll never fires a page change.
 (function(){
   var tx = null, ty = null, sw = false, el = $('bstrat');
-  el.addEventListener('touchstart', function(e){ tx = e.touches[0].clientX; ty = e.touches[0].clientY; sw = false; }, { passive: true });
+  el.addEventListener('touchstart', function(e){
+    // the charts pan horizontally — a drag there is a chart gesture, not a page change
+    if (e.target.closest('.dd-chart')) { tx = null; return; }
+    tx = e.touches[0].clientX; ty = e.touches[0].clientY; sw = false;
+  }, { passive: true });
   el.addEventListener('touchmove', function(e){ if (tx === null) return; var dx = e.touches[0].clientX - tx, dy = e.touches[0].clientY - ty; if (!sw && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) sw = true; }, { passive: true });
   el.addEventListener('touchend', function(e){
     if (!sw || tx === null) { tx = null; sw = false; return; }
@@ -3210,7 +3248,7 @@ window.addEventListener('resize', function() {
   document.addEventListener('touchstart', function(e){
     sy = null;
     if (e.touches.length !== 1) return;
-    if (e.target.closest('#chatDock, #thComposeDock, #hcmBuyCard, #hero')) return;
+    if (e.target.closest('#chatDock, #thComposeDock, #hcmBuyCard, #hero, .dd-chart')) return;
     var sc = activeScroller();
     var top = sc === document.scrollingElement ? window.scrollY : (sc.scrollTop || 0);
     if (top > 2) return;
