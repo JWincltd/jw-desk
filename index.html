@@ -1246,7 +1246,11 @@ function renderBriefing() {
 }
 var boardInitialized = false;
 var boardScrollY = 0;
+// Peel every overlay off, so `shown` always tells the truth about what is on screen — topPage()
+// and the pull-to-refresh helpers both trust it.
+function clearOverlays() { ['org', 'reports', 'bstrat', 'thesis'].forEach(function(id) { $(id).classList.remove('shown'); }); }
 function swipeToBoard() {
+  clearOverlays();
   $('brief').classList.add('gone');
   sessionStorage.setItem('jwPage', 'board');
   if (!boardInitialized) {
@@ -1258,6 +1262,7 @@ function swipeToBoard() {
   }
 }
 function goToBrief() {
+  clearOverlays();
   boardScrollY = window.scrollY;
   $('brief').classList.remove('gone');
   window.scrollTo(0, 0);
@@ -1298,6 +1303,20 @@ function enterBoard(skip) {
   });
 }());
 
+// Which page the user is ACTUALLY looking at. Layers stay `shown` underneath one another so a
+// back-swipe reveals a stationary page, which means "is it shown" is a different question from
+// "is it on top" — and answering the first when you meant the second is how the live-quote
+// pollers ended up spending quota on hidden pages. Ordered topmost-first; keep it that way.
+// Single source of truth: jwLive, ddLive and pull-to-refresh all read this.
+function topPage() {
+  if ($('org').classList.contains('shown')) return 'org';
+  if ($('reports').classList.contains('shown')) return 'reports';
+  if ($('bstrat').classList.contains('shown')) return 'bstrat';
+  if ($('thesis').classList.contains('shown')) return 'thesis';
+  if (!$('brief').classList.contains('gone')) return 'brief';
+  return 'board';
+}
+
 /* ---------- live quote on the conviction card (Finnhub, key device-local) ---------- */
 var jwLive = (function() {
   var timer = null, sym = null;
@@ -1306,6 +1325,9 @@ var jwLive = (function() {
   var render = function(html, cls) { var e = el(); if (e) { e.innerHTML = html; e.className = 'hcm-live' + (cls ? ' ' + cls : ''); } };
   function tick() {
     if (!el() || !sym || !key() || document.visibilityState !== 'visible') return;
+    // #hcmLive lives in the board, which is always in the DOM — so element-exists was never the
+    // same test as on-screen, and this kept polling from thesis, swing strat, reports and the firm
+    if (topPage() !== 'board') return;
     fetch('https://finnhub.io/api/v1/quote?symbol=' + sym + '&token=' + key())
       .then(function(r) {
         if (r.status === 401 || r.status === 403) { localStorage.removeItem('jwFhKey'); setup(); return null; }
@@ -1334,7 +1356,9 @@ var jwLive = (function() {
       sym = symbol;
       if (!key()) { setup(); return; }
       var e = el(); if (e) e.onclick = null;
-      tick();
+      // deferred: the session-restore path renders the board BEFORE it stacks the page you were
+      // last on, so a synchronous tick would fire one request for a board you never see
+      setTimeout(tick, 0);
       if (!timer) timer = setInterval(tick, 30000);
     },
   };
@@ -2607,13 +2631,9 @@ var ddLive = (function(){
   var key = function(){ return localStorage.getItem('jwFhKey'); };
   var el = function(i){ return document.getElementById('ddlive-' + i); };
   var render = function(i, html, cls){ var e = el(i); if (e) { e.innerHTML = html; e.className = 'hcm-live' + (cls ? ' ' + cls : ''); } };
-  // Only poll when swing strat is the page actually on top. It stays `shown` underneath reports
-  // and the firm for the back-swipe, so "is it shown" would keep burning free-tier quota there.
-  function onTop(){
-    return $('bstrat').classList.contains('shown')
-      && !$('reports').classList.contains('shown')
-      && !$('org').classList.contains('shown');
-  }
+  // Only poll when swing strat is the page actually on top — it stays `shown` underneath reports
+  // and the firm for the back-swipe, and polling there burns free-tier quota on a hidden page.
+  function onTop(){ return topPage() === 'bstrat'; }
   function quote(i, sym){
     fetch('https://finnhub.io/api/v1/quote?symbol=' + encodeURIComponent(sym) + '&token=' + key())
       .then(function(r){
@@ -3069,30 +3089,21 @@ window.addEventListener('resize', function() {
   var ARMED_AT = 60, MAX = 96;
   var sy = null, sx = null, dist = 0, engaged = false;
 
-  // Tested TOPMOST-FIRST: lower pages linger `shown` underneath for the back-swipe, so asking
-  // "is thesis shown?" before "is reports shown?" would answer with the buried page.
-  // Note org/thesis/brief scroll an INNER wrap, while reports and swing strat scroll the section
-  // itself (overflow-y is on #reports / #bstrat) — so those two are their own scroller.
+  // org/thesis/brief scroll an INNER wrap, while reports and swing strat scroll the section
+  // itself (overflow-y sits on #reports / #bstrat) — so those two are their own scroller.
   function activeScroller(){
-    if (document.getElementById('org').classList.contains('shown')) return document.querySelector('.org-wrap');
-    if (document.getElementById('reports').classList.contains('shown')) return document.getElementById('reports');
-    if (document.getElementById('bstrat').classList.contains('shown')) return document.getElementById('bstrat');
-    if (document.getElementById('thesis').classList.contains('shown')) return document.querySelector('.th-wrap');
-    if (!document.getElementById('brief').classList.contains('gone')) {
+    var p = topPage();
+    if (p === 'org') return document.querySelector('.org-wrap');
+    if (p === 'reports' || p === 'bstrat') return document.getElementById(p);
+    if (p === 'thesis') return document.querySelector('.th-wrap');
+    if (p === 'brief') {
       var w = document.querySelector('#brief .hm-wrap');
       return (w && w.scrollHeight > w.clientHeight) ? w : { scrollTop: 0 };
     }
     return document.scrollingElement;
   }
   // the element that visually follows the finger — native iOS pulls the PAGE, not a widget
-  function activePage(){
-    if (document.getElementById('org').classList.contains('shown')) return document.getElementById('org');
-    if (document.getElementById('reports').classList.contains('shown')) return document.getElementById('reports');
-    if (document.getElementById('bstrat').classList.contains('shown')) return document.getElementById('bstrat');
-    if (document.getElementById('thesis').classList.contains('shown')) return document.getElementById('thesis');
-    if (!document.getElementById('brief').classList.contains('gone')) return document.getElementById('brief');
-    return document.getElementById('board');
-  }
+  function activePage(){ return document.getElementById(topPage()); }
   var page = null;
   function setPull(px){
     if (!page) {
