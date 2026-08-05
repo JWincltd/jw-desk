@@ -542,7 +542,12 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 /* ---- swing strat — deep-dive setup cards (same overlay mechanics as thesis; sits over it in the journey) ---- */
 /* the PAGE is the scroller (reports pattern) — wheel input works from anywhere on the page,
    including the wide gutters beside the column, not just over the 920px center */
-#bstrat{position:fixed;inset:0;z-index:61;background:var(--bg);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .38s cubic-bezier(.4,0,.2,1)}
+/* Every page layer needs a UNIQUE z-index, ascending in journey order (brief 60 → thesis 61 →
+   swing strat 62 → reports 63 → firm 64). Pull-to-refresh slots an opaque backdrop at the pulled
+   page's z minus one, so if two layers shared a level the page stacked underneath would show its
+   heading through the gap. Swing strat used to share 61 with thesis — which sits under it. */
+#bstrat{position:fixed;inset:0;z-index:62;background:var(--bg);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .38s cubic-bezier(.4,0,.2,1);scrollbar-width:none;-ms-overflow-style:none}
+#bstrat::-webkit-scrollbar{width:0;height:0;display:none}
 #bstrat.shown{transform:none}
 #bstrat.shown ~ #chatDock{display:none}
 .dd-wrap{padding:6px 24px 60px;max-width:920px;width:100%;margin:0 auto}
@@ -583,7 +588,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 @media(max-width:640px){.th-wrap{padding:6px 16px 120px}#thComposeDock{right:14px;bottom:14px}}
 
 /* ===== reports — the periodic desk report (holds the nav slot the firm used to) ===== */
-#reports{position:fixed;inset:0;z-index:62;background:var(--bg);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .38s cubic-bezier(.4,0,.2,1)}
+#reports{position:fixed;inset:0;z-index:63;background:var(--bg);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .38s cubic-bezier(.4,0,.2,1)}
 #reports.shown{transform:none}
 #reports.shown ~ #chatDock{display:none}
 .rp-wrap{max-width:940px;width:100%;margin:0 auto;padding:0 20px 60px;flex:1}
@@ -641,7 +646,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .rp-empty{border:1px dashed var(--line-2);border-radius:16px;padding:30px 22px;text-align:center;color:var(--fg-dim);font-size:13px;line-height:1.6;margin-top:20px}
 @media(max-width:560px){.rp-head h1{font-size:22px}.rp-cardhead{flex-wrap:wrap}.rp-toggle{display:none}}
 /* ===== the firm — org chart ===== */
-#org{position:fixed;inset:0;z-index:63;background:var(--bg);overflow:hidden;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .38s cubic-bezier(.4,0,.2,1)}
+#org{position:fixed;inset:0;z-index:64;background:var(--bg);overflow:hidden;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .38s cubic-bezier(.4,0,.2,1)}
 #org.shown{transform:none}
 #org.shown ~ #chatDock{display:none}
 .org-wrap{flex:1;min-height:0;display:flex;flex-direction:column;padding:6px 24px 28px;max-width:1280px;width:100%;margin:0 auto;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none}
@@ -1268,6 +1273,7 @@ function enterBoard(skip) {
     if (!$('brief').classList.contains('gone')) return;
     if ($('org').classList.contains('shown')) return;
     if ($('thesis').classList.contains('shown')) return;
+    if ($('bstrat').classList.contains('shown')) return;    // swing strat has its own swipe handler
     if ($('reports').classList.contains('shown')) return;   // reports has its own swipe handler
     if (e.target.closest('#hcmBuyCard')) return;
     if (e.target.closest('#hero')) return;
@@ -2448,9 +2454,11 @@ function goToOrg(){
   if (!orgInitialized) renderOrg();
   renderTheses();
   renderReports();
-  // the firm lives under Reports, which lives under Thesis scout — keep the whole chain stacked
-  // in place beneath, so swiping back peels the firm → reports → thesis cleanly.
+  // the firm lives over Reports → Swing strat → Thesis scout — keep the whole chain stacked
+  // in place beneath, so swiping back peels the firm → reports → swing strat → thesis cleanly.
   stackUnder('thesis');
+  renderBstrat();
+  stackUnder('bstrat');
   stackUnder('reports');
   $('org').classList.add('shown');
   sessionStorage.setItem('jwPage', 'org');
@@ -2472,7 +2480,12 @@ function openThesis(){
   $('brief').classList.add('gone');
   if (!boardInitialized) { boardInitialized = true; initBoard(); }
   renderTheses();
+  // Clear every layer ABOVE thesis, the way openBstrat and openReports do for theirs. Today's
+  // callers can only reach here from the board or the firm, so nothing is stranded in practice —
+  // but leaving reports/swing strat shown would put a page you already left back on top of you.
   $('org').classList.remove('shown');
+  $('reports').classList.remove('shown');
+  $('bstrat').classList.remove('shown');
   $('thesis').classList.add('shown');
   sessionStorage.setItem('jwPage', 'thesis');
 }
@@ -2596,13 +2609,30 @@ function openBstrat(){
   $('org').classList.remove('shown'); $('reports').classList.remove('shown');
   renderBstrat();
   $('bstrat').classList.add('shown');
+  // #bstrat is its OWN scroller (overflow-y on the section), so window.scrollTo does nothing
+  // here — re-entering a page you'd scrolled would land you mid-list. Reset the section itself.
+  $('bstrat').scrollTop = 0;
   sessionStorage.setItem('jwPage', 'bstrat');
 }
 function closeBstratToBoard(){ $('bstrat').classList.remove('shown'); $('thesis').classList.remove('shown'); sessionStorage.setItem('jwPage', 'board'); }
 function closeBstratToBrief(){ $('bstrat').classList.remove('shown'); $('thesis').classList.remove('shown'); $('brief').classList.remove('gone'); window.scrollTo(0, 0); sessionStorage.setItem('jwPage', 'brief'); }
 function closeBstratToThesis(){ $('bstrat').classList.remove('shown'); window.scrollTo(0, 0); sessionStorage.setItem('jwPage', 'thesis'); }
-function closeReportsToBstrat(){ $('reports').classList.remove('shown'); renderBstrat(); stackUnder('bstrat'); window.scrollTo(0, 0); sessionStorage.setItem('jwPage', 'bstrat'); }
-function closeOrgToBstrat(){ $('org').classList.remove('shown'); $('reports').classList.remove('shown'); orgDetailClose(); renderTheses(); stackUnder('thesis'); renderBstrat(); stackUnder('bstrat'); window.scrollTo(0, 0); sessionStorage.setItem('jwPage', 'bstrat'); }
+// swipe on swing strat: right → back to thesis scout, left → on to reports.
+// Matches the thesis and reports handlers exactly, including the vertical-intent guard so a
+// diagonal scroll never fires a page change.
+(function(){
+  var tx = null, ty = null, sw = false, el = $('bstrat');
+  el.addEventListener('touchstart', function(e){ tx = e.touches[0].clientX; ty = e.touches[0].clientY; sw = false; }, { passive: true });
+  el.addEventListener('touchmove', function(e){ if (tx === null) return; var dx = e.touches[0].clientX - tx, dy = e.touches[0].clientY - ty; if (!sw && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) sw = true; }, { passive: true });
+  el.addEventListener('touchend', function(e){
+    if (!sw || tx === null) { tx = null; sw = false; return; }
+    var dx = e.changedTouches[0].clientX - tx; tx = null; sw = false;
+    if (dx > 50) closeBstratToThesis();
+    else if (dx < -50) openReports();
+  });
+}());
+function closeReportsToBstrat(){ $('reports').classList.remove('shown'); renderBstrat(); stackUnder('bstrat'); $('bstrat').scrollTop = 0; window.scrollTo(0, 0); sessionStorage.setItem('jwPage', 'bstrat'); }
+function closeOrgToBstrat(){ $('org').classList.remove('shown'); $('reports').classList.remove('shown'); orgDetailClose(); renderTheses(); stackUnder('thesis'); renderBstrat(); stackUnder('bstrat'); $('bstrat').scrollTop = 0; window.scrollTo(0, 0); sessionStorage.setItem('jwPage', 'bstrat'); }
 
 /* ---------- reports page navigation ---------- */
 // Put a page in place UNDER the current one without animating it (so a back-swipe reveals a
@@ -2614,9 +2644,12 @@ function openReports(){
   renderTheses();
   renderReports();
   $('org').classList.remove('shown');
-  // keep Thesis scout in place UNDER reports (instant, no slide) so swiping back reveals it
+  // keep the chain in place UNDER reports (instant, no slide) so swiping back reveals it
   // cleanly instead of animating a second page in. Reports is the only layer that moves.
+  // Swing strat sits directly beneath — it is what a back-swipe from here now lands on.
   stackUnder('thesis');
+  renderBstrat();
+  stackUnder('bstrat');
   $('reports').classList.add('shown');
   window.scrollTo(0, 0);
   sessionStorage.setItem('jwPage', 'reports');
@@ -2630,7 +2663,7 @@ function closeReportsToThesis(){ $('reports').classList.remove('shown'); $('bstr
   var tx = null, ty = null, sw = false, el = $('reports');
   el.addEventListener('touchstart', function(e){ tx = e.touches[0].clientX; ty = e.touches[0].clientY; sw = false; }, { passive: true });
   el.addEventListener('touchmove', function(e){ if (tx === null) return; var dx = e.touches[0].clientX - tx, dy = e.touches[0].clientY - ty; if (!sw && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) sw = true; }, { passive: true });
-  el.addEventListener('touchend', function(e){ if (!sw || tx === null) { tx = null; sw = false; return; } var dx = e.changedTouches[0].clientX - tx; tx = null; sw = false; if (dx > 50) closeReportsToThesis(); });
+  el.addEventListener('touchend', function(e){ if (!sw || tx === null) { tx = null; sw = false; return; } var dx = e.changedTouches[0].clientX - tx; tx = null; sw = false; if (dx > 50) closeReportsToBstrat(); });
 }());
 
 /* ---------- reports render ---------- */
@@ -2748,7 +2781,7 @@ $('rpScrim') && $('rpScrim').addEventListener('click', function(){ $('rpScrim').
     if (!sw || tx === null) { tx = null; sw = false; return; }
     var dx = e.changedTouches[0].clientX - tx; tx = null; sw = false;
     if (dx > 50) closeThesisToBoard();
-    else if (dx < -50) openReports();
+    else if (dx < -50) openBstrat();   // next page in the journey is swing strat, not reports
   });
 }());
 // "Add a new thesis" composer — files DIRECTLY into the GitHub-issue intake via the API.
@@ -2882,14 +2915,14 @@ if (_jwPage === 'board') enterBoard(true);
 else if (_jwPage === 'org') {
   enterBoard(true);
   if (!orgInitialized) renderOrg();
-  renderTheses(); renderReports();
-  stackUnder('thesis'); stackUnder('reports');   // firm sits over reports over thesis
+  renderTheses(); renderReports(); renderBstrat();
+  stackUnder('thesis'); stackUnder('bstrat'); stackUnder('reports');   // firm > reports > swing strat > thesis
   var _o = $('org'); _o.style.transition = 'none'; _o.classList.add('shown'); _o.offsetHeight; _o.style.transition = '';
 }
 else if (_jwPage === 'reports') {
   enterBoard(true);
-  renderTheses(); renderReports();
-  stackUnder('thesis');   // thesis sits under reports so swipe-back reveals it
+  renderTheses(); renderReports(); renderBstrat();
+  stackUnder('thesis'); stackUnder('bstrat');   // swing strat sits under reports so swipe-back reveals it
   var _rp = $('reports'); _rp.style.transition = 'none'; _rp.classList.add('shown'); _rp.offsetHeight; _rp.style.transition = '';
 }
 else if (_jwPage === 'thesis') {
@@ -2964,8 +2997,14 @@ window.addEventListener('resize', function() {
   var ARMED_AT = 60, MAX = 96;
   var sy = null, sx = null, dist = 0, engaged = false;
 
+  // Tested TOPMOST-FIRST: lower pages linger `shown` underneath for the back-swipe, so asking
+  // "is thesis shown?" before "is reports shown?" would answer with the buried page.
+  // Note org/thesis/brief scroll an INNER wrap, while reports and swing strat scroll the section
+  // itself (overflow-y is on #reports / #bstrat) — so those two are their own scroller.
   function activeScroller(){
     if (document.getElementById('org').classList.contains('shown')) return document.querySelector('.org-wrap');
+    if (document.getElementById('reports').classList.contains('shown')) return document.getElementById('reports');
+    if (document.getElementById('bstrat').classList.contains('shown')) return document.getElementById('bstrat');
     if (document.getElementById('thesis').classList.contains('shown')) return document.querySelector('.th-wrap');
     if (!document.getElementById('brief').classList.contains('gone')) {
       var w = document.querySelector('#brief .hm-wrap');
@@ -2976,6 +3015,8 @@ window.addEventListener('resize', function() {
   // the element that visually follows the finger — native iOS pulls the PAGE, not a widget
   function activePage(){
     if (document.getElementById('org').classList.contains('shown')) return document.getElementById('org');
+    if (document.getElementById('reports').classList.contains('shown')) return document.getElementById('reports');
+    if (document.getElementById('bstrat').classList.contains('shown')) return document.getElementById('bstrat');
     if (document.getElementById('thesis').classList.contains('shown')) return document.getElementById('thesis');
     if (!document.getElementById('brief').classList.contains('gone')) return document.getElementById('brief');
     return document.getElementById('board');
