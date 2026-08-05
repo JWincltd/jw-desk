@@ -270,6 +270,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-live{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--fg-dim);flex:none;white-space:nowrap}
 .hcm-live .ld{width:6px;height:6px;border-radius:999px;background:var(--positive);animation:blink 2s infinite;flex:none}
 .hcm-live .ld.off{background:var(--fg-mute);animation:none}
+/* Age of the print. A bare price implies "now" — it is not: the card polls, and polling stops
+   entirely when the tab is backgrounded or the page is buried. Past the stale mark the dot drops
+   to .off, reusing the existing dead-quote language rather than inventing a second one. */
+.hcm-live .ago{font-style:normal;color:var(--fg-mute);font-size:10.5px;flex:none}
+.hcm-live .ago::before{content:"·";margin:0 4px;color:var(--line-2)}
 .hcm-live.setup{color:var(--fg-mute);cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase}
 .hcm-live.setup:hover{color:var(--fg-dim);border-color:var(--line-2)}
 
@@ -1317,6 +1322,60 @@ function topPage() {
   return 'board';
 }
 
+/* ---------- shared live-quote plumbing (used by the board card AND the swing strat cards) ----
+   A price with no timestamp reads as "now". It is not: these poll on an interval, and the poll
+   stops dead when the tab is backgrounded or the page is buried under another. So every quote
+   carries its own age, and the age keeps counting between polls instead of freezing. */
+var STALE_MS = 60000;
+// Finnhub's published free-tier ceiling is 60 calls/min. Sit well under it: 10s is the floor, and
+// if the swing page ever carries more than three cards the interval stretches so the whole page
+// still costs no more than the budget below.
+var POLL_MIN_MS = 10000, POLL_BUDGET_PER_MIN = 30;
+function pollMs(n) { return Math.max(POLL_MIN_MS, Math.ceil(n / POLL_BUDGET_PER_MIN * 60) * 1000); }
+function agoText(ms) {
+  // clamped at zero: a device clock running ahead of the exchange must not read as a future quote
+  var s = Math.max(0, Math.round(ms / 1000));
+  if (s < 60) return s + 's';
+  var m = Math.round(s / 60); if (m < 60) return m + 'm';
+  var h = Math.round(m / 60); return h < 24 ? h + 'h' : Math.round(h / 24) + 'd';
+}
+// Prefer the quote's OWN timestamp — Finnhub /quote returns `t` in epoch seconds. Fall back to
+// when we received it: that still tracks the thing that goes wrong here (polling stopping while
+// you look elsewhere), it just cannot see any delay upstream of us.
+function quoteAt(q) { var t = +q.t; return t > 0 ? t * 1000 : Date.now(); }
+function liveHTML(q, at) {
+  var up = (q.dp || 0) >= 0;
+  return '<span class="ld"></span>$' + (+q.c).toFixed(2)
+    + '&nbsp;<span class="' + (up ? 'up' : 'dn') + '">' + (up ? '+' : '') + (+q.dp || 0).toFixed(2) + '%</span>'
+    + '<i class="ago" data-t="' + at + '" title="quote timestamp ' + new Date(at).toLocaleTimeString() + '">'
+    + agoText(Date.now() - at) + '</i>';
+}
+// Repaint every age in place once a second — no refetching, just the label counting up — and
+// refresh on arrival when the page you are looking at changes.
+//
+// The arrival hook matters because the pollers go quiet off-page. Swing strat re-runs
+// renderBstrat() on every entry so it already re-ticks, but renderHCM() runs ONCE at init: without
+// this, walking back to the board showed whatever was fetched before you left, or nothing at all
+// if the first tick happened while another page was on top. One watcher covers every route in —
+// swipe, breadcrumb, session restore — instead of six call sites that can fall out of step.
+var _lastTop = null;
+setInterval(function() {
+  if (document.visibilityState !== 'visible') return;
+  document.querySelectorAll('.hcm-live .ago').forEach(function(el) {
+    var t = +el.dataset.t; if (!t) return;
+    var age = Date.now() - t;
+    el.textContent = agoText(age);
+    var dot = el.parentNode.querySelector('.ld');
+    if (dot) dot.classList.toggle('off', age > STALE_MS);
+  });
+  var top = topPage();
+  if (top !== _lastTop) {
+    _lastTop = top;
+    if (top === 'board' && typeof jwLive !== 'undefined' && jwLive) jwLive.refresh();
+    else if (top === 'bstrat' && typeof ddLive !== 'undefined' && ddLive) ddLive.refresh();
+  }
+}, 1000);
+
 /* ---------- live quote on the conviction card (Finnhub, key device-local) ---------- */
 var jwLive = (function() {
   var timer = null, sym = null;
@@ -1336,8 +1395,7 @@ var jwLive = (function() {
       .then(function(q) {
         if (!q) return;
         if (!q.c) { render('<span class="ld off"></span>—'); return; }
-        var up = (q.dp || 0) >= 0;
-        render('<span class="ld"></span>$' + (+q.c).toFixed(2) + '&nbsp;<span class="' + (up ? 'up' : 'dn') + '">' + (up ? '+' : '') + (+q.dp || 0).toFixed(2) + '%</span>');
+        render(liveHTML(q, quoteAt(q)));
       })
       .catch(function() { render('<span class="ld off"></span>—'); });
   }
@@ -1359,8 +1417,9 @@ var jwLive = (function() {
       // deferred: the session-restore path renders the board BEFORE it stacks the page you were
       // last on, so a synchronous tick would fire one request for a board you never see
       setTimeout(tick, 0);
-      if (!timer) timer = setInterval(tick, 30000);
+      if (!timer) timer = setInterval(tick, pollMs(1));
     },
+    refresh: tick,   // called when the board becomes the page on top
   };
 }());
 
@@ -2643,8 +2702,7 @@ var ddLive = (function(){
       .then(function(q){
         if (!q) return;
         if (!q.c) { render(i, '<span class="ld off"></span>—'); return; }
-        var up = (q.dp || 0) >= 0;
-        render(i, '<span class="ld"></span>$' + (+q.c).toFixed(2) + '&nbsp;<span class="' + (up ? 'up' : 'dn') + '">' + (up ? '+' : '') + (+q.dp || 0).toFixed(2) + '%</span>');
+        render(i, liveHTML(q, quoteAt(q)));
       })
       .catch(function(){ render(i, '<span class="ld off"></span>—'); });
   }
@@ -2676,8 +2734,10 @@ var ddLive = (function(){
       // deferred: openBstrat renders BEFORE it adds .shown, so a synchronous tick would see
       // the page as not-yet-on-top and skip the first refresh
       setTimeout(tick, 0);
-      if (!timer) timer = setInterval(tick, 30000);
+      // one pass costs N calls, so the interval scales with the card count to hold the budget
+      if (!timer) timer = setInterval(tick, pollMs(syms.length));
     },
+    refresh: tick,   // called when swing strat becomes the page on top
   };
 }());
 function renderBstrat(){
