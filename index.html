@@ -51,13 +51,17 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hm-top h1{font-size:20px;font-weight:500;letter-spacing:-.02em}
 .page-nav{display:flex;align-items:center;justify-content:center;gap:10px;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:12px;font-weight:600;letter-spacing:0;text-transform:none;margin-bottom:12px}
 .page-step{color:var(--fg-mute);display:inline-flex;align-items:center;gap:6px;background:none;border:none;font-family:inherit;font-size:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer;padding:4px 8px;border-radius:6px;transition:color .15s var(--ease);touch-action:manipulation;-webkit-tap-highlight-color:transparent;white-space:nowrap}
-/* 4 steps must sit on ONE line on phones: shrink type, then spread across the full width */
+/* The 5 steps must sit on ONE line on phones: shrink type, then spread across the full
+   width. Measured last-step right edge vs viewport: 390->374, 375->359, 360->344, all
+   clear. 320 needed 330 at 9.5px, so it gets one more step down — a nav target cut off
+   the screen is unreachable, not just ugly. Re-measure this ladder if a 6th page lands. */
 @media(max-width:640px){
   .page-nav{justify-content:space-between;gap:0;font-size:10.5px;width:100%}
   .page-step{padding:4px 2px;gap:4px}
   .nav-sep{font-size:10px}
 }
 @media(max-width:360px){.page-nav{font-size:9.5px}}
+@media(max-width:344px){.page-nav{font-size:9px}}
 /* mobile: the dark headline card reads better AFTER the three play cards */
 @media(max-width:640px){
   #board{display:flex;flex-direction:column}
@@ -332,10 +336,58 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .th-ev .dot.supporting{background:var(--positive)}.th-ev .dot.contradicting{background:var(--danger)}
 .th-ev .dot.earnings{background:var(--amber)}
 .th-ev .d{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--fg-mute);white-space:nowrap}
-.hcm-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:16px}
-@media(max-width:960px){.hcm-grid{grid-template-columns:1fr 1fr}}
-@media(max-width:640px){.hcm-grid{grid-template-columns:1fr}}
+.hcm-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media(max-width:960px){.hcm-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+@media(max-width:640px){.hcm-grid{grid-template-columns:minmax(0,1fr)}}
 .hcm-card{border:1px solid var(--line);border-radius:16px;background:var(--bg);padding:18px 20px;display:flex;flex-direction:column}
+
+/* ===== horizontal containment ================================================
+   A grid/flex item's automatic minimum size is its CONTENT's min-content width.
+   So one unbreakable atom inside a card — an option descriptor, an entry range,
+   a live-quote chip — sets a floor the column cannot go below, those floors sum
+   across each flex row, and the card stops shrinking. The band then pushes the
+   whole page sideways.
+
+   Measured before this block: the band would not go below 436px at ANY
+   viewport (320/360/390 all reported body.scrollWidth = 436), so every phone
+   narrower than ~436px scrolled horizontally no matter how the cards were laid
+   out. The MSFT bleed was the mild end of it.
+
+   Three rules, in the order they bite:
+     1. tracks and boxes may shrink       -> minmax(0,..) above + min-width:0
+     2. rows reflow instead of summing    -> flex-wrap:wrap
+     3. a token with no break opportunity -> overflow-wrap:anywhere
+        breaks rather than pushing width
+
+   Every rule turns overflow into a LINE BREAK. Nothing is clipped and nothing
+   is ellipsised — a truncated price reads as a different price, which is worse
+   than a taller card. Rule 3 is the backstop: with it, no future pill or label,
+   however long, can widen a card, because min-content collapses to one glyph. */
+.hcm-band,.hcm-grid,.hcm-band *{min-width:0}
+.hcm-card{overflow-wrap:anywhere}
+/* ...but rule 3 must never fire on a ticker or a number. "MSFT" broken as "MS/FT" and
+   "$518.79" broken as "$518./79" are misreadings, and a misread price is worse than a
+   wide card. These atoms are short enough to always fit, so they opt out of the break
+   and stay whole; if one ever could not fit, it overflows into .hcm-stats' existing
+   clip rather than splitting a figure. */
+.hcm-psym,.hcm-sym{flex:none}
+.hcm-psym,.hcm-sym,.hcm-sv,.hcm-pchg,.hcm-chg,.hcm-prob,.hcm-exit b{overflow-wrap:normal}
+/* Rows whose children are all shrinkable prose + a couple of flex:none chips do NOT
+   need to wrap — the prose reflows and the chips stay pinned. Only rows that stack up
+   several unshrinkable chips do. Wrapping the others strands the right-hand item
+   (the change %, the Details button) alone on a second line, which is its own bug. */
+.hcm-top,.hcm-tagrow{flex-wrap:wrap}
+.hcm-prob,.hcm-pchg,.hcm-chg{flex:none}
+/* The play header is the crowded one: logo + ticker + contract + up to three chips +
+   change %. Rather than let the row wrap — which would strand the % — the CHIPS get
+   their own flexible column that wraps inside the row. The % stays pinned top-right at
+   every width, which is where the eye looks for it. */
+.hcm-pchips{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;min-width:0}
+.hcm-tagrow{display:flex;align-items:center;gap:8px;margin-top:8px}
+/* NOTE: the other half of this fix is edited into the rules themselves further
+   down — .hcm-sv / .hcm-popt / .exp-tag drop white-space:nowrap, and .hcm-stats
+   uses minmax(0,1fr) tracks. Those rules are declared AFTER this block, so an
+   override here would lose the cascade. Keep the two halves in sync. */
 .hcm-buy{position:relative;border-color:rgba(176,122,46,.30);background:rgba(176,122,46,.025)}
 .hcm-buy.hcm-r1{background:rgba(212,175,55,.18);border-color:rgba(212,175,55,.44)}
 .hcm-buy.hcm-r2{background:rgba(180,180,185,.16);border-color:rgba(180,180,185,.42)}
@@ -357,17 +409,19 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-chg{font-family:'IBM Plex Mono',monospace;font-size:14px;margin-left:auto}
 .hcm-name{font-size:12px;color:var(--fg-mute);margin-bottom:10px}
 .hcm-thesis{font-size:13px;color:var(--fg-dim);line-height:1.55;margin-bottom:14px;flex:1}
-.hcm-stats{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:auto}
+/* minmax(0,1fr): a bare 1fr floors each track at the cell's min-content width, so a
+   long entry range ("$500.00 - $505.00") widened the whole card. See containment block. */
+.hcm-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:auto}
 .hcm-stat{padding:9px 10px;border-right:1px solid var(--line)}
 .hcm-stat:last-child{border-right:none}
 .hcm-sk{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--fg-mute);display:block;margin-bottom:3px}
-.hcm-sv{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:500;display:block;white-space:nowrap}
+.hcm-sv{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:500;display:block}
 .hcm-play{padding:10px 0;border-bottom:1px solid var(--line)}
 .hcm-play:last-child{border-bottom:none;padding-bottom:0}
 .hcm-play-top{display:flex;align-items:center;gap:8px;margin-bottom:4px}
 .hcm-psym{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:500}
 .hcm-pchg{font-family:'IBM Plex Mono',monospace;font-size:11px;margin-left:auto}
-.hcm-popt{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--amber);background:rgba(176,122,46,.08);padding:3px 7px;border-radius:5px;white-space:nowrap}
+.hcm-popt{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--amber);background:rgba(176,122,46,.08);padding:3px 7px;border-radius:5px}
 .hcm-pname{display:none}
 .hcm-plevel{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--fg-dim);margin-bottom:3px}
 .hcm-pmeta{display:flex;flex-wrap:wrap;gap:4px 14px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--fg-dim);margin:6px 0 5px}
@@ -384,7 +438,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-exit-row.scale{margin-top:1px;opacity:.82}
 .hcm-exit-row.scale .hcm-exit{font-size:10px}
 .hcm-exit .xtag,.hcm-plevel .xtag{font-family:'IBM Plex Mono',monospace;font-size:8.5px;color:var(--fg-mute);text-transform:uppercase;letter-spacing:.06em;margin-left:6px}
-.hcm-size{font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:5px;border:1px solid var(--line-2);color:var(--fg-dim);white-space:nowrap;flex:none}
+.hcm-size{font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:5px;border:1px solid var(--line-2);color:var(--fg-dim);flex:none}
 .hcm-size.full{color:var(--positive);border-color:rgba(74,135,98,.35)}
 .hcm-size.half{color:var(--amber);border-color:rgba(176,122,46,.42);background:rgba(176,122,46,.06)}
 .hcm-size.carry{color:var(--fg-dim);border-color:var(--line-2);letter-spacing:.04em}
@@ -425,7 +479,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   .foot{padding:24px 16px 90px}
   .hcm-card{padding:16px}
   .hcm-sym{font-size:23px}
-  .hcm-stats{grid-template-columns:repeat(2,1fr)}
+  .hcm-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
   .hcm-stat{border-bottom:1px solid var(--line)}
   .hcm-stat:nth-child(2n){border-right:none}
   .hcm-stat:nth-child(n+3){border-bottom:none}
@@ -510,7 +564,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hr-dot.hi{background:var(--positive)}.hr-dot.mid{background:var(--amber)}.hr-dot.lo{background:var(--bg-3);border:1px solid var(--line-2)}
 .list-legend{display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-mute);margin-bottom:8px;padding:0 2px}
 /* ===== feature: expires tag ===== */
-.exp-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.02em;color:var(--fg-mute);background:var(--bg-3);border:1px solid var(--line);padding:3px 5px;border-radius:5px;white-space:nowrap;text-align:center}
+.exp-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.02em;color:var(--fg-mute);background:var(--bg-3);border:1px solid var(--line);padding:3px 5px;border-radius:5px;text-align:center}
 /* ===== feature: past accuracy line ===== */
 .acc-line{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--fg-mute);margin-top:4px}
 /* ===== feature: bell alert button ===== */
@@ -1520,7 +1574,7 @@ function renderHCM() {
       whyNow +
       buyExt +
       ivNote('buy', b.symbol) +
-      '<div style="display:flex;align-items:center;gap:8px;margin-top:8px">' + accLine + expTag + '</div>' +
+      '<div class="hcm-tagrow">' + accLine + expTag + '</div>' +
       scoreHTML +
       '<div style="margin-top:10px">' + stats + '</div>';
   }
@@ -1588,7 +1642,9 @@ function renderHCM() {
     var volChip = p.volGated ? '<span class="hcm-size volgate" title="Enter only on a close above the level on \u22651.5\u00d7 average volume">Vol gate</span>' : '';
     var ext = p.extendedNote ? '<div class="hcm-ext"><span>⚠</span><span>' + escc(p.extendedNote).replace('⚠ ', '') + '</span></div>' : '';
     return '<div class="hcm-play">' +
-      '<div class="hcm-play-top">' + tlogo(p.symbol, 20) + '<span class="hcm-psym">' + p.symbol + '</span><span class="hcm-popt">' + escc(p.play) + '</span>' + sizeChip + carryChip + volChip + '<span class="hcm-pchg ' + cls(p.changePct) + '">' + pct(p.changePct) + '</span></div>' +
+      '<div class="hcm-play-top">' + tlogo(p.symbol, 20) + '<span class="hcm-psym">' + p.symbol + '</span>' +
+      '<span class="hcm-pchips"><span class="hcm-popt">' + escc(p.play) + '</span>' + sizeChip + carryChip + volChip + '</span>' +
+      '<span class="hcm-pchg ' + cls(p.changePct) + '">' + pct(p.changePct) + '</span></div>' +
       '<div class="hcm-pname">' + escc(p.name) + '</div>' +
       (ivChip(ptype, p.symbol) ? '<div class="iv-row">' + ivChip(ptype, p.symbol) + '</div>' : '') +
       ivNote(ptype, p.symbol) +
