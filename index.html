@@ -363,6 +363,29 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
    is ellipsised — a truncated price reads as a different price, which is worse
    than a taller card. Rule 3 is the backstop: with it, no future pill or label,
    however long, can widen a card, because min-content collapses to one glyph. */
+/* Uses the board's OWN tokens. The first cut invented a `--card` variable that does not exist and
+   fell back to a dark hex, which put dark text on a dark card in a LIGHT-themed board - unreadable.
+   box-sizing is the other half: without it the horizontal padding is ADDED to a 100% width and the
+   band runs 16px past a 390px screen. Both were measured, not assumed. */
+.ovn-band{box-sizing:border-box;width:100%;max-width:1180px;margin:0 auto;padding:0 28px 18px}
+.ovn-band,.ovn-band *{min-width:0;box-sizing:border-box}
+.ovn-card{border:1px solid var(--line);border-radius:16px;background:var(--bg);padding:18px 20px;overflow-wrap:anywhere}
+.ovn-hd{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px 12px;margin-bottom:10px}
+.ovn-t{font-size:14px;font-weight:600;letter-spacing:-.01em;color:var(--fg)}
+.ovn-paper{flex:none;overflow-wrap:normal;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:rgba(180,83,9,.10);color:#b45309;border:1px solid rgba(180,83,9,.28)}
+.ovn-sub{font-size:12.5px;line-height:1.55;color:var(--fg-dim);margin-bottom:12px}
+.ovn-sub b{color:var(--fg);font-weight:600}
+.ovn-syms{display:flex;flex-wrap:wrap;gap:6px 8px;margin-bottom:14px}
+.ovn-sym{flex:none;overflow-wrap:normal;font-size:12px;font-variant-numeric:tabular-nums;padding:3px 9px;border-radius:7px;background:rgba(31,30,27,.04);border:1px solid var(--line);color:var(--fg)}
+.ovn-sym b{font-weight:600}
+.ovn-sym i{font-style:normal;color:var(--fg-mute);margin-left:6px}
+.ovn-rec{width:100%;max-width:100%;overflow-x:auto}
+.ovn-rec table{border-collapse:collapse;font-size:12px;min-width:320px}
+.ovn-rec th,.ovn-rec td{padding:5px 14px 5px 0;text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--fg)}
+.ovn-rec th{color:var(--fg-mute);font-weight:500}
+.ovn-pos{color:#15803d}.ovn-neg{color:#b91c1c}
+.ovn-status{margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;line-height:1.55;color:var(--fg-dim)}
+@media(max-width:640px){.ovn-band{padding:0 16px 14px}.ovn-card{padding:14px 16px}}
 .hcm-band,.hcm-grid,.hcm-band *{min-width:0}
 .hcm-card{overflow-wrap:anywhere}
 /* ...but rule 3 must never fire on a ticker or a number. "MSFT" broken as "MS/FT" and
@@ -1044,6 +1067,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     </div>
   </div>
   <div class="hcm-band" id="hcmBand"></div>
+  <div class="ovn-band" id="ovnBand"></div>
   <div class="wrapC">
     <div class="regimeBand"><span class="lab">Regime read</span><div class="t" id="regimeT"></div><div class="regime-timeline" id="regimeTimeline"><button class="rh-toggle" id="rhToggle">▸ Updates</button><div class="regime-timeline-body" id="rhBody"></div></div></div>
     <div class="sector-widget" id="sectorWidget"><div class="sw-header"><div class="sw-lab">Sector rotation</div><div class="sw-read" id="sectorRead"></div></div><div class="sector-rows" id="sectorRows"></div></div>
@@ -1673,6 +1697,46 @@ function renderHCM() {
     recLine('breakdown') + feedNote(bd) +
     (bd.length ? bd.map(function(p) { return playHTML(p, 'breakdown'); }).join('') : emptyNote(sn.breakdown || 'No breakdown setups this morning — nothing cleared the desk.')) + '</div>';
   $('hcmBand').innerHTML = ivBanner() + '<div class="hcm-grid">' + buyHTML + boHTML + bdHTML + '</div>';
+  // OVERNIGHT BOOK — the replacement for the event cards. Buy the close, sell the open, one night.
+  // It is PAPER and the badge says so on every paint: net of a 10bps round trip its historical
+  // record is negative on the train half, and it clears only at roughly 1-2bps a side.
+  (function renderOvernight() {
+    var el = $('ovnBand'); if (!el) return;
+    var o = B.overnight;
+    if (!o) { el.innerHTML = ''; return; }
+    var cards = o.cards || [], rec = o.record || {}, byCost = rec.byCost || {};
+    var syms = cards.length
+      ? '<div class="ovn-syms">' + cards.map(function(c) {
+          return '<span class="ovn-sym"><b>' + c.symbol + '</b><i>' +
+            (typeof c.entry === 'number' ? '$' + c.entry.toFixed(2) : '') + '</i></span>';
+        }).join('') + '</div>'
+      : '<div class="ovn-sub">No cards tonight — the cross-section was too thin to rank. A count, not a result.</div>';
+    // The record is shown at EVERY cost assumption, because five years of history cannot say what
+    // these names cost to fill and one number here would hide the only open question.
+    var costs = Object.keys(byCost).sort(function(a, b) { return a - b; });
+    var sign = function(x) { return x == null ? '—' : (x >= 0 ? '+' : '') + x; };
+    var cls = function(x) { return x == null ? '' : (x >= 0 ? 'ovn-pos' : 'ovn-neg'); };
+    var table = costs.length
+      ? '<div class="ovn-rec"><table><tr><th>Cost a side</th><th>Mean/night</th><th>Total</th><th>Hit</th><th>Nights</th></tr>' +
+        costs.map(function(c) {
+          var r = byCost[c] || {};
+          return '<tr><td>' + c + 'bps</td>' +
+            '<td class="' + cls(r.meanBps) + '">' + sign(r.meanBps) + 'bps</td>' +
+            '<td class="' + cls(r.totalPct) + '">' + sign(r.totalPct) + '%</td>' +
+            '<td>' + (r.hitRate == null ? '—' : Math.round(r.hitRate * 100) + '%') + '</td>' +
+            '<td>' + (r.nights || 0) + '</td></tr>';
+        }).join('') + '</table></div>'
+      : '<div class="ovn-sub">No settled nights yet.</div>';
+    el.innerHTML = '<div class="ovn-card">' +
+      '<div class="ovn-hd"><span class="ovn-t">Overnight book</span>' +
+      '<span class="ovn-paper">paper — not traded</span></div>' +
+      '<div class="ovn-sub">Top ' + (o.n || 25) + ' nearest their 52-week high, bought in the closing auction and sold market-on-open. ' +
+      'Replaces the event cards, whose record was a confirmed loser. <b>It is not a live book:</b> historically it nets ' +
+      'below zero on the train half at a 10bps round trip and clears only at roughly 1&ndash;2bps a side.</div>' +
+      syms + table +
+      '<div class="ovn-status">' + (o.status || '') + '</div></div>';
+  })();
+
   if (buys.length) jwLive.start(buys[0].symbol);
 
   // Lock buy card height after first paint so carousel switches never resize the card
