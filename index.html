@@ -367,6 +367,14 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
    fell back to a dark hex, which put dark text on a dark card in a LIGHT-themed board - unreadable.
    box-sizing is the other half: without it the horizontal padding is ADDED to a 100% width and the
    band runs 16px past a 390px screen. Both were measured, not assumed. */
+/* SUNSET BANNER. The event cards were retired 2026-08-12. A card published before that date keeps
+   showing until its own entry window closes, and the buy strip's explanatory note renders ONLY in
+   the empty state — so without this banner a retired book paints identically to a live one on the
+   days that still have a carried card, which is exactly how a dead strategy gets traded by
+   accident. Same tokens and the same box-sizing/min-width discipline as the band below. */
+.hcm-sunset{box-sizing:border-box;display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 10px;margin-bottom:12px;padding:9px 13px;border:1px solid var(--line);border-radius:12px;background:var(--bg);font-size:12px;line-height:1.55;color:var(--fg-dim);overflow-wrap:anywhere}
+.hcm-sunset *{min-width:0;box-sizing:border-box}
+.hcm-sunset .sx{flex:none;overflow-wrap:normal;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:rgba(180,83,9,.10);color:#b45309;border:1px solid rgba(180,83,9,.28)}
 .ovn-band{box-sizing:border-box;width:100%;max-width:1180px;margin:0 auto;padding:0 28px 18px}
 .ovn-band,.ovn-band *{min-width:0;box-sizing:border-box}
 .ovn-card{border:1px solid var(--line);border-radius:16px;background:var(--bg);padding:18px 20px;overflow-wrap:anywhere}
@@ -1696,7 +1704,16 @@ function renderHCM() {
     '<div class="hcm-hd"><span class="hcm-t">Breakdown plays</span><span class="hcm-count">' + bd.length + (bd.length === 1 ? ' watch' : ' watches') + '</span></div>' +
     recLine('breakdown') + feedNote(bd) +
     (bd.length ? bd.map(function(p) { return playHTML(p, 'breakdown'); }).join('') : emptyNote(sn.breakdown || 'No breakdown setups this morning — nothing cleared the desk.')) + '</div>';
-  $('hcmBand').innerHTML = ivBanner() + '<div class="hcm-grid">' + buyHTML + boHTML + bdHTML + '</div>';
+  // The sunset banner sits ABOVE the strip so it is read before any card, and it paints on every
+  // day the payload carries `hcm.sunset` — including days when a pre-sunset card is still carried,
+  // which is the only case where a card and a retirement notice appear together. Absent on every
+  // payload published before 2026-08-12, so old boards render exactly as they did.
+  const sunsetHTML = hcm.sunset
+    ? '<div class="hcm-sunset"><span class="sx">Retired ' + escc(hcm.sunset) + '</span><span>' +
+      escc(hcm.note || 'The desk no longer originates these cards. The overnight book below is what it publishes now.') +
+      '</span></div>'
+    : '';
+  $('hcmBand').innerHTML = ivBanner() + sunsetHTML + '<div class="hcm-grid">' + buyHTML + boHTML + bdHTML + '</div>';
   // OVERNIGHT BOOK — the replacement for the event cards. Buy the close, sell the open, one night.
   // It is PAPER and the badge says so on every paint: net of a 10bps round trip its historical
   // record is negative on the train half, and it clears only at roughly 1-2bps a side.
