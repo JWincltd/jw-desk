@@ -403,6 +403,18 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .ovn-lab{display:block;font-size:8.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-mute);margin-bottom:2px}
 .ovn-val{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--fg)}
 .ovn-val.pend{font-weight:500;font-size:11.5px;color:var(--fg-mute)}
+/* THE REST OF THE BOOK. All 25 names are bought; the top few get the card above and the other
+   twenty sit here, ranked and compact. `white-space:nowrap` on all three values is load-bearing:
+   without it a 134px tile broke "$379.12" across two lines and "MOG.A" after the dot, which reads
+   as a different price and a different ticker. The tile is sized to the widest real value, not to
+   a guess. */
+.ovn-restlab{font-size:9px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-mute);margin:2px 0 8px}
+.ovn-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(134px,1fr));gap:7px;margin-bottom:16px}
+.ovn-tile{box-sizing:border-box;min-width:0;display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"r s k" "r e k";gap:0 6px;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--bg);padding:7px 9px}
+.ovn-tr{grid-area:r;font-size:9px;font-weight:600;color:var(--fg-mute);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ovn-ts{grid-area:s;font-size:13px;font-weight:600;letter-spacing:-.01em;color:var(--fg);white-space:nowrap}
+.ovn-te{grid-area:e;font-size:11px;color:var(--fg-dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ovn-tk{grid-area:k;font-size:10px;color:var(--fg-mute);font-variant-numeric:tabular-nums;white-space:nowrap}
 .ovn-rec{width:100%;max-width:100%;overflow-x:auto}
 .ovn-rec table{border-collapse:collapse;font-size:12px;min-width:320px}
 .ovn-rec th,.ovn-rec td{padding:5px 14px 5px 0;text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--fg)}
@@ -1741,8 +1753,27 @@ function renderHCM() {
     var money = function(x) { return typeof x === 'number' ? '$' + x.toFixed(2) : null; };
     // One card per name, same chrome as the conviction cards. EXIT is deliberately empty until the
     // night settles at the open — a card that showed a predicted exit would be inventing a price.
+    // The whole book is bought; only the presentation is tiered. `featured` comes from the payload
+    // rather than being hardcoded here, so the split is one constant in one place.
+    var nFeat = typeof o.featured === 'number' ? o.featured : cards.length;
+    var rest = cards.slice(nFeat);
+    var restHTML = rest.length
+      ? '<div class="ovn-restlab">The other ' + rest.length + ' ranked name' + (rest.length === 1 ? '' : 's') +
+        '</div><div class="ovn-tiles">' + rest.map(function(c, i) {
+          // Settled tiles show what the night actually did; live ones show why the name is here.
+          var done = typeof c.retBps === 'number';
+          var mark = done
+            ? '<span class="ovn-tk ' + (c.retBps > 0 ? 'ovn-pos' : c.retBps < 0 ? 'ovn-neg' : '') + '">' +
+              (c.retBps > 0 ? '+' : '') + c.retBps.toFixed(0) + 'bps</span>'
+            : '<span class="ovn-tk">' + (typeof c.score === 'number' ? (c.score >= 0 ? '+' : '') + c.score.toFixed(1) + '%' : '') + '</span>';
+          return '<div class="ovn-tile"><span class="ovn-tr">' + (nFeat + i + 1) + '</span>' +
+            '<span class="ovn-ts">' + escc(c.symbol) + '</span>' +
+            '<span class="ovn-te">' + (typeof c.entry === 'number' ? '$' + c.entry.toFixed(2) : '—') + '</span>' +
+            mark + '</div>';
+        }).join('') + '</div>'
+      : '';
     var syms = cards.length
-      ? '<div class="ovn-plays">' + cards.map(function(c, i) {
+      ? '<div class="ovn-plays">' + cards.slice(0, nFeat).map(function(c, i) {
           var settled = typeof c.retBps === 'number';
           var why = (typeof c.score === 'number')
             ? (c.score >= 0
@@ -1794,8 +1825,8 @@ function renderHCM() {
       // also stays on the payload — the publisher still refuses to ship without it, and the
       // reports and weekly scoreboard still book this as a trial rather than a live strategy.
       '<div class="ovn-hd"><span class="ovn-t">Overnight book</span></div>' +
-      '<div class="ovn-sub">Top ' + (o.n || 5) + ' nearest their 52-week high, bought in the closing auction and sold market-on-open.</div>' +
-      syms + table +
+      '<div class="ovn-sub">Top ' + (o.n || 25) + ' nearest their 52-week high, bought in the closing auction and sold market-on-open.</div>' +
+      syms + restHTML + table +
       '<div class="ovn-status">' + (o.status || '') + '</div></div>';
   })();
 
