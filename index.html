@@ -415,6 +415,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .ovn-ts{grid-area:s;font-size:13px;font-weight:600;letter-spacing:-.01em;color:var(--fg);white-space:nowrap}
 .ovn-te{grid-area:e;font-size:11px;color:var(--fg-dim);font-variant-numeric:tabular-nums;white-space:nowrap}
 .ovn-tk{grid-area:k;font-size:10px;color:var(--fg-mute);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* THIS NIGHT IN ONE LINE — the book's average move and how many names won. Sits above the cards
+   because it is the first thing worth knowing. GROSS: cost is charged in the record table below at
+   five assumptions, and stamping one guess on the headline is what that table exists to prevent. */
+.ovn-sum{box-sizing:border-box;display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 18px;margin-bottom:14px;padding:11px 14px;border:1px solid var(--line);border-radius:11px;background:var(--bg)}
+.ovn-sum > div{min-width:0}
+.ovn-sumlab{display:block;font-size:8.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-mute);margin-bottom:2px}
+.ovn-sumbig{font-size:21px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ovn-sumval{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--fg);white-space:nowrap}
+.ovn-sumnote{flex:1 1 100%;font-size:11px;line-height:1.5;color:var(--fg-mute)}
 .ovn-rec{width:100%;max-width:100%;overflow-x:auto}
 .ovn-rec table{border-collapse:collapse;font-size:12px;min-width:320px}
 .ovn-rec th,.ovn-rec td{padding:5px 14px 5px 0;text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--fg)}
@@ -1753,6 +1762,28 @@ function renderHCM() {
     var money = function(x) { return typeof x === 'number' ? '$' + x.toFixed(2) : null; };
     // One card per name, same chrome as the conviction cards. EXIT is deliberately empty until the
     // night settles at the open — a card that showed a predicted exit would be inventing a price.
+    // THIS NIGHT IN ONE LINE. Counted over the cards that SETTLED — a name with no opening print is
+    // absent, not flat, so it is excluded from both the average and the win denominator and called
+    // out separately. Absent entirely until something has settled: there is no average of nothing.
+    var s = o.summary;
+    var sumHTML = '';
+    if (s && s.settled) {
+      var cls = s.avgPct > 0 ? 'ovn-pos' : s.avgPct < 0 ? 'ovn-neg' : '';
+      sumHTML = '<div class="ovn-sum">' +
+        '<div><span class="ovn-sumlab">Book average · gross</span>' +
+          '<span class="ovn-sumbig ' + cls + '">' + (s.avgPct > 0 ? '+' : '') + s.avgPct.toFixed(2) + '%</span></div>' +
+        '<div><span class="ovn-sumlab">Won</span><span class="ovn-sumval">' + s.won + ' / ' + s.settled +
+          '</span></div>' +
+        (s.flat ? '<div><span class="ovn-sumlab">Flat</span><span class="ovn-sumval">' + s.flat + '</span></div>' : '') +
+        (s.unsettled ? '<div><span class="ovn-sumlab">No opening print</span><span class="ovn-sumval">' +
+          s.unsettled + '</span></div>' : '') +
+        '<div class="ovn-sumnote">Equal-weight average across the ' + s.settled + ' name' +
+          (s.settled === 1 ? '' : 's') + ' that settled, before costs' +
+          (s.unsettled ? ' — ' + s.unsettled + ' never printed an open and ' + (s.unsettled === 1 ? 'is' : 'are') +
+            ' excluded rather than counted flat' : '') +
+          '. Cost is charged in the table below, at every assumption.</div>' +
+        '</div>';
+    }
     // The whole book is bought; only the presentation is tiered. `featured` comes from the payload
     // rather than being hardcoded here, so the split is one constant in one place.
     var nFeat = typeof o.featured === 'number' ? o.featured : cards.length;
@@ -1764,7 +1795,7 @@ function renderHCM() {
           var done = typeof c.retBps === 'number';
           var mark = done
             ? '<span class="ovn-tk ' + (c.retBps > 0 ? 'ovn-pos' : c.retBps < 0 ? 'ovn-neg' : '') + '">' +
-              (c.retBps > 0 ? '+' : '') + c.retBps.toFixed(0) + 'bps</span>'
+              (c.retBps > 0 ? '+' : '') + (c.retBps / 100).toFixed(2) + '%</span>'
             : '<span class="ovn-tk">' + (typeof c.score === 'number' ? (c.score >= 0 ? '+' : '') + c.score.toFixed(1) + '%' : '') + '</span>';
           return '<div class="ovn-tile"><span class="ovn-tr">' + (nFeat + i + 1) + '</span>' +
             '<span class="ovn-ts">' + escc(c.symbol) + '</span>' +
@@ -1792,11 +1823,14 @@ function renderHCM() {
                 (settled ? '<span class="ovn-val">' + (money(c.exit) || '—') + '</span>'
                          : '<span class="ovn-val pend">at the open</span>') + '</div>' +
               (settled
-                // Zero is FLAT, not a gain. `>= 0` painted an unchanged name green with a "+" in
+                // Shown as a PERCENT, which is the scale a single name moves on — 549bps reads as
+                // an abstraction, +5.49% reads as the trade. The book-level record below stays in
+                // bps because a night's mean is a basis-point quantity, and both are labelled.
+                // Zero is FLAT, not a gain: `>= 0` painted an unchanged name green with a "+" in
                 // front of it, which is a win the tape did not give us.
                 ? '<div class="ovn-cell wide"><span class="ovn-lab">Overnight</span><span class="ovn-val ' +
                   (c.retBps > 0 ? 'ovn-pos' : c.retBps < 0 ? 'ovn-neg' : '') + '">' +
-                  (c.retBps > 0 ? '+' : '') + c.retBps.toFixed(1) + ' bps</span></div>'
+                  (c.retBps > 0 ? '+' : '') + (c.retBps / 100).toFixed(2) + '%</span></div>'
                 : '') +
             '</div></div>';
         }).join('') + '</div>'
@@ -1826,7 +1860,7 @@ function renderHCM() {
       // reports and weekly scoreboard still book this as a trial rather than a live strategy.
       '<div class="ovn-hd"><span class="ovn-t">Overnight book</span></div>' +
       '<div class="ovn-sub">Top ' + (o.n || 25) + ' nearest their 52-week high, bought in the closing auction and sold market-on-open.</div>' +
-      syms + restHTML + table +
+      sumHTML + syms + restHTML + table +
       '<div class="ovn-status">' + (o.status || '') + '</div></div>';
   })();
 
