@@ -416,13 +416,32 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .ovn-restlab{font-size:9px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-mute);margin:2px 0 8px}
 .ovn-tiles{display:grid;grid-template-columns:1fr 1fr;gap:7px 10px;margin-bottom:16px}
 .ovn-col{display:flex;flex-direction:column;gap:7px;min-width:0}
-@media (max-width:560px){.ovn-tiles{grid-template-columns:1fr}}
 .ovn-tile{box-sizing:border-box;min-width:0;display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"r s k" "r e e";gap:1px 6px;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--bg);padding:7px 9px}
 .ovn-tr{grid-area:r;font-size:9px;font-weight:600;color:var(--fg-mute);font-variant-numeric:tabular-nums;white-space:nowrap}
 .ovn-ts{grid-area:s;font-size:13px;font-weight:600;letter-spacing:-.01em;color:var(--fg);white-space:nowrap}
-.ovn-tpend{color:var(--fg-mute)}
+.ovn-tpend{color:var(--fg-mute);white-space:nowrap}
 .ovn-te{grid-area:e;font-size:10.5px;color:var(--fg-dim);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:clip}
 .ovn-tk{grid-area:k;font-size:10px;color:var(--fg-mute);font-variant-numeric:tabular-nums;white-space:nowrap}
+@media (max-width:560px){
+  .ovn-tiles{gap:6px 6px}
+  .ovn-col{gap:6px}
+  .ovn-tile{padding:6px 7px;gap:1px 4px}
+  .ovn-ts{font-size:12px}
+  .ovn-te{font-size:9.5px}
+  .ovn-tk{font-size:9.5px}
+  .ovn-tr{font-size:8px}
+}
+@media (max-width:360px){
+  .ovn-tile{padding:5px 6px}
+  .ovn-ts{font-size:11.5px}
+  .ovn-te{font-size:9px}
+  .ovn-tk{font-size:9px}
+  /* At 320px the column is 124px and "$379.12 → $383.63" does not fit on one line — it was being
+     CLIPPED, and half a price is a wrong price. Below this width the line may wrap, and it can only
+     wrap at a SPACE: there is no break opportunity inside "$379.12", and `.ovn-tpend` keeps
+     "at open" whole. So a number never splits; only the arrow moves to the next line. */
+  .ovn-te{white-space:normal}
+}
 /* THIS NIGHT IN ONE LINE — the book's average move and how many names won. Sits above the cards
    because it is the first thing worth knowing. GROSS: cost is charged in the record table below at
    five assumptions, and stamping one guess on the headline is what that table exists to prevent. */
