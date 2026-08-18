@@ -376,11 +376,24 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-sunset *{min-width:0;box-sizing:border-box}
 .hcm-sunset .sx{flex:none;overflow-wrap:normal;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:rgba(180,83,9,.10);color:#b45309;border:1px solid rgba(180,83,9,.28)}
 .ovn-band{box-sizing:border-box;width:100%;max-width:1180px;margin:0 auto;padding:0 28px 18px;
-  /* The desk's gold, --amber #B07A2E, at wash strength. Scoped to the band rather than :root so
-     there is one place to change it and it cannot leak into a section that did not ask for it. */
-  --ovn-gold:rgba(176,122,46,.07);--ovn-gold-2:rgba(176,122,46,.13);--ovn-gold-line:rgba(176,122,46,.26)}
+  /* GOLD IS THE CURRENT NIGHT. The desk's gold, --amber #B07A2E, at wash strength; scoped to the
+     band rather than :root so there is one place to change it and it cannot leak into a section
+     that did not ask for it. Named for its JOB, not its colour, because `.ovn-past` below swaps
+     the same three tokens for grey and a variable called "gold" holding grey is a small lie that
+     costs the next reader real time. */
+  --ovn-tint:rgba(176,122,46,.07);--ovn-tint-2:rgba(176,122,46,.13);--ovn-tint-line:rgba(176,122,46,.26)}
 .ovn-band,.ovn-band *{min-width:0;box-sizing:border-box}
-.ovn-card{border:1px solid var(--ovn-gold-line);border-radius:16px;background:var(--ovn-gold);padding:18px 20px;overflow-wrap:anywhere}
+.ovn-card{border:1px solid var(--ovn-tint-line);border-radius:16px;background:var(--ovn-tint);padding:18px 20px;
+  overflow-wrap:anywhere;transition:background .2s var(--ease),border-color .2s var(--ease)}
+
+/* GREY IS HISTORY. Paging off the latest night swaps the three tokens on the card, so the border,
+   the dots, the arrows and the picker all follow in one move rather than needing their own rules —
+   and anything added inside the band later inherits the same behaviour for free.
+   Neutral grey mixed from --fg rather than a new hue, so it reads as "receded" next to the gold
+   instead of as a second accent colour competing with it. */
+.ovn-card.ovn-past{--ovn-tint:rgba(31,30,27,.045);--ovn-tint-2:rgba(31,30,27,.075);--ovn-tint-line:rgba(31,30,27,.13)}
+.ovn-card.ovn-past .ovn-rel{color:var(--fg-dim)}
+@media (prefers-reduced-motion:reduce){.ovn-card{transition:none}}
 
 /* ONE NIGHT IS ONE PAGE. All 25 names for a night read as a single thing you page through, so the
    deck is a scroll-snap track: native touch swipe, native momentum, no gesture library, and it
@@ -402,19 +415,19 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 /* THE PAGER HEAD: which night you are on, where you are in the run, and a way out of the window. */
 .ovn-nav{display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px;margin-bottom:12px}
 .ovn-dots{display:flex;align-items:center;gap:7px;flex:none}
-.ovn-dot{width:7px;height:7px;padding:0;border-radius:999px;border:0;cursor:pointer;background:var(--ovn-gold-line);
+.ovn-dot{width:7px;height:7px;padding:0;border-radius:999px;border:0;cursor:pointer;background:var(--ovn-tint-line);
   transition:transform .18s var(--ease),background .18s var(--ease)}
 .ovn-dot[aria-current="true"]{background:var(--amber);transform:scale(1.5)}
 .ovn-when{flex:1 1 auto;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .ovn-date{font-size:14px;font-weight:600;letter-spacing:-.01em;color:var(--fg);font-variant-numeric:tabular-nums}
 .ovn-rel{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;
-  background:var(--ovn-gold-2);color:#8a5f21;border:1px solid var(--ovn-gold-line);white-space:nowrap}
+  background:var(--ovn-tint-2);color:#8a5f21;border:1px solid var(--ovn-tint-line);white-space:nowrap}
 .ovn-arrows{display:flex;gap:6px;flex:none}
-.ovn-arrow{width:28px;height:28px;padding:0;border-radius:999px;border:1px solid var(--ovn-gold-line);background:var(--bg);
+.ovn-arrow{width:28px;height:28px;padding:0;border-radius:999px;border:1px solid var(--ovn-tint-line);background:var(--bg);
   color:var(--fg-dim);font-size:13px;line-height:1;cursor:pointer}
 .ovn-arrow[disabled]{opacity:.32;cursor:default}
 .ovn-pick{flex:none;font:inherit;font-size:11.5px;color:var(--fg-dim);background:var(--bg);
-  border:1px solid var(--ovn-gold-line);border-radius:8px;padding:5px 8px;max-width:100%}
+  border:1px solid var(--ovn-tint-line);border-radius:8px;padding:5px 8px;max-width:100%}
 @media (max-width:560px){
   .ovn-when{flex:1 1 100%;order:-1}
   .ovn-pick{flex:1 1 100%}
@@ -2006,7 +2019,7 @@ function renderHCM() {
       table +
       '<div class="ovn-status">' + (o.status || '') + '</div></div>';
 
-    var deck = $('ovnDeck'), dots = $('ovnDots'), pick = $('ovnPick');
+    var deck = $('ovnDeck'), dots = $('ovnDots'), pick = $('ovnPick'), cardEl = el.querySelector('.ovn-card');
 
     // TIME RUNS LEFT TO RIGHT IN THE DECK: oldest on the left, newest on the right, and it opens
     // parked at the right-hand end. So a finger dragged left-to-right — the gesture for "go back" —
@@ -2032,6 +2045,11 @@ function renderHCM() {
       $('ovnRel').innerHTML = !n.settledAt
         ? '<span class="ovn-rel">' + (g === 0 ? 'Tonight' : 'Unsettled') + '</span>'
         : (g === 0 ? '<span class="ovn-rel">Latest</span>' : '');
+      // Gold for the night that is current, grey for anything already in the past. Keyed on the
+      // SAME `g === 0` the pill uses, so the colour and the "Latest"/"Tonight" label can never
+      // disagree — and, like the pill, it is decided by the payload rather than by the reader's
+      // clock, which would put a browser in another timezone in charge of the desk's colours.
+      cardEl.classList.toggle('ovn-past', g !== 0);
       Array.prototype.forEach.call(dots.children, function (d, i) {
         d.setAttribute('aria-current', i === active ? 'true' : 'false');
       });
