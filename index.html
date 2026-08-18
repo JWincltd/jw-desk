@@ -381,6 +381,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hcm-sunset{box-sizing:border-box;display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 10px;margin-bottom:12px;padding:9px 13px;border:1px solid var(--line);border-radius:12px;background:var(--bg);font-size:12px;line-height:1.55;color:var(--fg-dim);overflow-wrap:anywhere}
 .hcm-sunset *{min-width:0;box-sizing:border-box}
 .hcm-sunset .sx{flex:none;overflow-wrap:normal;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:rgba(180,83,9,.10);color:#b45309;border:1px solid rgba(180,83,9,.28)}
+/* THE CLOSED BOOK'S FINAL RECORD. The three empty cards came off, and they were carrying it — the
+   record is the evidence the sunset was right, so it moves here rather than leaving with them. */
+.hcm-sunset .sr{flex:1 1 100%;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--fg-mute);font-variant-numeric:tabular-nums}
+.hcm-sunset .sr .up{color:var(--positive)}.hcm-sunset .sr .dn{color:var(--danger)}
 .ovn-band{box-sizing:border-box;width:100%;max-width:1180px;margin:0 auto;padding:0 28px 18px;
   /* GOLD IS THE CURRENT NIGHT. The desk's gold, --amber #B07A2E, at wash strength; scoped to the
      band rather than :root so there is one place to change it and it cannot leak into a section
@@ -1839,12 +1843,37 @@ function renderHCM() {
   // day the payload carries `hcm.sunset` — including days when a pre-sunset card is still carried,
   // which is the only case where a card and a retirement notice appear together. Absent on every
   // payload published before 2026-08-12, so old boards render exactly as they did.
+  // THE CLOSED BOOK'S FINAL RECORD, summed across the three sections. It lived on the cards, and
+  // the cards come off below, so it moves onto the banner: the record is the evidence the sunset
+  // was the right call, and dropping it with the empty cards would leave the retirement asserted
+  // instead of shown.
+  const finalRec = (function () {
+    let w = 0, l = 0, r = 0, g = 0;
+    for (const t of ['buy', 'breakout', 'breakdown']) {
+      const x = rec[t]; if (!x || !x.graded) continue;
+      w += x.wins || 0; l += x.losses || 0; r += +x.totalR || 0; g += x.graded;
+    }
+    if (!g) return '';
+    return '<span class="sr">Closed record — ' + w + 'W / ' + l + 'L · <span class="' +
+      (r >= 0 ? 'up' : 'dn') + '">' + (r >= 0 ? '+' : '') + r.toFixed(1) + 'R</span> over ' + g + ' graded plays</span>';
+  }());
   const sunsetHTML = hcm.sunset
     ? '<div class="hcm-sunset"><span class="sx">Retired ' + escc(hcm.sunset) + '</span><span>' +
       escc(hcm.note || 'The desk no longer originates these cards. The overnight book below is what it publishes now.') +
-      '</span></div>'
+      '</span>' + finalRec + '</div>'
     : '';
-  $('hcmBand').innerHTML = ivBanner() + sunsetHTML + '<div class="hcm-grid">' + buyHTML + boHTML + bdHTML + '</div>';
+  // ONCE THE BOOK IS BOTH RETIRED AND EMPTY, THE STRIP COMES OFF ENTIRELY. Three dashed cards each
+  // repeating the same retirement sentence said one thing three times and pushed the live book —
+  // the overnight one — a screen and a half down the page.
+  //
+  // Both conditions are required. `carried:true` cards keep showing until their own entry window
+  // closes, so a retired book is not necessarily an empty one, and hiding the strip on the sunset
+  // date alone would have silently dropped a live card the desk was still standing behind. Without
+  // a sunset the empty state renders exactly as it always did, so pre-2026-08-12 boards are
+  // untouched.
+  const stripGone = hcm.sunset && !buys.length && !bo.length && !bd.length;
+  $('hcmBand').innerHTML = ivBanner() + sunsetHTML +
+    (stripGone ? '' : '<div class="hcm-grid">' + buyHTML + boHTML + bdHTML + '</div>');
   // OVERNIGHT BOOK — the replacement for the event cards. Buy the close, sell the open, one night.
   // It is PAPER and the badge says so on every paint: net of a 10bps round trip its historical
   // record is negative on the train half, and it clears only at roughly 1-2bps a side.
