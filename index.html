@@ -62,15 +62,21 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 }
 @media(max-width:360px){.page-nav{font-size:9.5px}}
 @media(max-width:344px){.page-nav{font-size:9px}}
-/* mobile: the dark headline card reads better AFTER the three play cards */
+/* mobile: the dark headline card reads better AFTER the three play cards.
+   EVERY CHILD OF #board MUST BE LISTED HERE. `order` defaults to 0, which sorts BEFORE anything
+   given an order, so a new section that is not in this list does not land where the DOM put it —
+   it jumps to the very top of the page. That is exactly what happened to the overnight band: it
+   sits after .hcm-band in the markup, read correctly on desktop, and on a phone appeared above the
+   ticker and the page nav. Adding a section and forgetting this block is a silent layout bug. */
 @media(max-width:640px){
   #board{display:flex;flex-direction:column}
   #board > .ticker{order:1}
   #board > .page-nav{order:2}
   #board > .hcm-band{order:3}
-  #board > .cHead{order:4}
-  #board > .wrapC{order:5}
-  #board > .foot{order:6}
+  #board > .ovn-band{order:4}
+  #board > .cHead{order:5}
+  #board > .wrapC{order:6}
+  #board > .foot{order:7}
 }
 .page-step:not(.on):hover{color:var(--fg-dim)}
 .page-step.on{color:var(--fg);cursor:default;pointer-events:none}
