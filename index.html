@@ -1510,6 +1510,13 @@ function enterBoard(skip) {
     if (e.target.closest('#hcmBuyCard')) return;
     if (e.target.closest('#hero')) return;
     if (e.target.closest('#chatDock')) return;
+    // A SWIPE THAT STARTS INSIDE A HORIZONTAL TRACK BELONGS TO THAT TRACK. The overnight deck
+    // scrolls sideways, so without this every page turn in the book ALSO threw the reader out to
+    // the thesis scout or back to the portfolio. Deliberately not a distance threshold — "a short
+    // swipe pages the cards, a long one changes screen" cannot be felt or predicted, and the long
+    // swipe would still be fighting the deck's own momentum scroll the whole way. Where the finger
+    // lands is unambiguous, and it is the same rule the buy carousel above already uses.
+    if (e.target.closest('.ovn-deck')) return;
     tx = e.touches[0].clientX; ty = e.touches[0].clientY; swiping = false;
   }, { passive: true });
   document.addEventListener('touchmove', function(e) {
@@ -1832,7 +1839,7 @@ function renderHCM() {
       : [{ asOf: o.asOf, settledAt: o.settledAt, summary: o.summary, featured: o.featured, cards: o.cards || [] }];
     var rec = o.record || {}, byCost = rec.byCost || {};
     var WINDOW = 5;                 // how many nights you can swipe without leaving the window
-    var winStart = 0;               // index into `nights` of the leftmost page currently in the deck
+    var winStart = 0;               // index into `nights` of the NEWEST night currently in the deck
     var money = function (x) { return typeof x === 'number' ? '$' + x.toFixed(2) : '—'; };
 
     // 'YYYY-MM-DD' SPLIT BY HAND, never `new Date(iso)`. The one-argument Date parser reads a bare
@@ -1843,6 +1850,17 @@ function renderHCM() {
       var p = String(iso).split('-');
       var d = new Date(+p[0], +p[1] - 1, +p[2]);
       return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    };
+
+    // A NIGHT IS NAMED BY THE DAY IT SETTLED, because that is the day the result belongs to: the
+    // 17th's book was sold into the 18th's open, so it is the 18th's number. Showing both ends made
+    // the reader do that arithmetic on every card.
+    //
+    // An unsettled night has no settlement day and must not be given a guessed one, so it shows the
+    // day it was BOUGHT, and says so. One date either way — never two — but never the same word for
+    // two different things.
+    var nightLabel = function (n) {
+      return n.settledAt ? fmtDate(n.settledAt) : 'Bought ' + fmtDate(n.asOf);
     };
 
     // THIS NIGHT IN ONE LINE. Counted over the cards that SETTLED — a name with no opening print is
@@ -1963,7 +1981,7 @@ function renderHCM() {
     var pickHTML = nights.length > WINDOW
       ? '<select class="ovn-pick" id="ovnPick" aria-label="Jump to a night">' +
         nights.map(function (n, i) {
-          return '<option value="' + i + '">' + fmtDate(n.asOf) + '</option>';
+          return '<option value="' + i + '">' + nightLabel(n) + '</option>';
         }).join('') + '</select>'
       : '';
 
@@ -1979,8 +1997,9 @@ function renderHCM() {
       '<div class="ovn-nav">' +
         '<div class="ovn-dots" id="ovnDots"></div>' +
         '<div class="ovn-when"><span class="ovn-date" id="ovnDate"></span><span id="ovnRel"></span></div>' +
-        '<div class="ovn-arrows"><button class="ovn-arrow" id="ovnPrev" aria-label="Newer night">‹</button>' +
-          '<button class="ovn-arrow" id="ovnNext" aria-label="Older night">›</button></div>' +
+        // The arrows point the way the deck moves: left is back in time, right is forward.
+        '<div class="ovn-arrows"><button class="ovn-arrow" id="ovnPrev" aria-label="Older night">‹</button>' +
+          '<button class="ovn-arrow" id="ovnNext" aria-label="Newer night">›</button></div>' +
         pickHTML +
       '</div>' +
       '<div class="ovn-deck" id="ovnDeck"></div>' +
@@ -1988,26 +2007,36 @@ function renderHCM() {
       '<div class="ovn-status">' + (o.status || '') + '</div></div>';
 
     var deck = $('ovnDeck'), dots = $('ovnDots'), pick = $('ovnPick');
-    var active = 0;                 // index WITHIN the window of the page in view
+
+    // TIME RUNS LEFT TO RIGHT IN THE DECK: oldest on the left, newest on the right, and it opens
+    // parked at the right-hand end. So a finger dragged left-to-right — the gesture for "go back" —
+    // walks backwards through the nights, which is the way the reader asked for and the way every
+    // other left-to-right-reading timeline behaves.
+    //
+    // `nights` is stored NEWEST FIRST (the publisher's order), so DOM position and night index run
+    // opposite ways and the two are converted through these, never by hand at the call site. `active`
+    // is always a DOM position; `g` is always an index into `nights`.
+    var active = 0;
+    var winLen = function () { return Math.min(WINDOW, nights.length - winStart); };
+    var domToNight = function (p) { return winStart + (winLen() - 1 - p); };
+    var nightToDom = function (g) { return winLen() - 1 - (g - winStart); };
 
     var paintHead = function () {
-      var n = nights[winStart + active];
+      var g = domToNight(active), n = nights[g];
       if (!n) return;
-      // Both dates, because "bought Mon, sold Tue" is what the night actually is. An unsettled
-      // night shows the entry date and says the exit has not happened — never a guessed date.
-      $('ovnDate').innerHTML = fmtDate(n.asOf) + ' <span class="ovn-tpend">→</span> ' +
-        (n.settledAt ? fmtDate(n.settledAt) : '<span class="ovn-tpend">next open</span>');
+      // ONE DATE: the day the night settled, because that is the day the result belongs to. An
+      // unsettled night has no settlement day and is not given a guessed one — it says what it is.
+      $('ovnDate').textContent = nightLabel(n);
       // The pill is derived from the DATA, not from the reader's clock: a browser in another
       // timezone must not decide which trading night is "tonight".
-      var g = winStart + active;
       $('ovnRel').innerHTML = !n.settledAt
         ? '<span class="ovn-rel">' + (g === 0 ? 'Tonight' : 'Unsettled') + '</span>'
         : (g === 0 ? '<span class="ovn-rel">Latest</span>' : '');
       Array.prototype.forEach.call(dots.children, function (d, i) {
         d.setAttribute('aria-current', i === active ? 'true' : 'false');
       });
-      $('ovnPrev').disabled = g === 0;
-      $('ovnNext').disabled = g === nights.length - 1;
+      $('ovnPrev').disabled = g === nights.length - 1;   // ‹ walks back in time
+      $('ovnNext').disabled = g === 0;                   // › walks forward
       if (pick) pick.value = String(g);
     };
 
@@ -2021,30 +2050,34 @@ function renderHCM() {
 
     // Rebuilds the deck for the current window. Called on first paint and whenever the picker moves
     // the window; swiping inside the window does not re-render, it just scrolls.
-    var renderWindow = function (focus) {
-      var win = nights.slice(winStart, winStart + WINDOW);
-      deck.innerHTML = win.map(pageHTML).join('');
-      dots.innerHTML = win.map(function (n, i) {
-        return '<button class="ovn-dot" data-i="' + i + '" aria-label="' + fmtDate(n.asOf) + '"></button>';
+    // `focusNight` is an index into `nights`, not a DOM position — every caller thinks in nights.
+    var renderWindow = function (focusNight) {
+      var win = nights.slice(winStart, winStart + WINDOW);   // newest first, as stored
+      var oldestFirst = win.slice().reverse();               // ...and reversed for the deck
+      deck.innerHTML = oldestFirst.map(pageHTML).join('');
+      dots.innerHTML = oldestFirst.map(function (n) {
+        return '<button class="ovn-dot" data-g="' + nights.indexOf(n) + '" aria-label="' + nightLabel(n) + '"></button>';
       }).join('');
-      active = Math.min(Math.max(focus || 0, 0), win.length - 1);
+      active = Math.min(Math.max(nightToDom(focusNight), 0), win.length - 1);
       deck.scrollLeft = active * deck.clientWidth;
       paintHead();
       sizeDeck();
     };
 
-    var goto = function (globalIdx) {
-      var i = Math.min(Math.max(globalIdx, 0), nights.length - 1);
-      var maxStart = Math.max(0, nights.length - WINDOW);
-      var wanted = Math.min(i, maxStart);
-      if (i < winStart || i >= winStart + WINDOW) { winStart = wanted; renderWindow(i - winStart); return; }
-      active = i - winStart;
+    var goTo = function (g) {
+      g = Math.min(Math.max(g, 0), nights.length - 1);
+      if (g < winStart || g >= winStart + WINDOW) {
+        winStart = Math.min(g, Math.max(0, nights.length - WINDOW));
+        renderWindow(g);
+        return;
+      }
+      active = nightToDom(g);
       deck.scrollTo({ left: active * deck.clientWidth, behavior: 'smooth' });
       paintHead();
       sizeDeck();
     };
 
-    renderWindow(0);
+    renderWindow(0);   // opens on the newest night, i.e. parked at the right-hand end
 
     // The scroll position is the source of truth for which page is showing — the deck can be moved
     // by a finger, a trackpad, the arrows or the dots, and reading it back means every one of them
@@ -2061,11 +2094,12 @@ function renderHCM() {
     }, { passive: true });
 
     dots.addEventListener('click', function (e) {
-      var b = e.target.closest('.ovn-dot'); if (b) goto(winStart + (+b.dataset.i));
+      var b = e.target.closest('.ovn-dot'); if (b) goTo(+b.dataset.g);
     });
-    $('ovnPrev').addEventListener('click', function () { goto(winStart + active - 1); });
-    $('ovnNext').addEventListener('click', function () { goto(winStart + active + 1); });
-    if (pick) pick.addEventListener('change', function () { goto(+pick.value); });
+    // A HIGHER index into `nights` is an OLDER night, so back-in-time is +1.
+    $('ovnPrev').addEventListener('click', function () { goTo(domToNight(active) + 1); });
+    $('ovnNext').addEventListener('click', function () { goTo(domToNight(active) - 1); });
+    if (pick) pick.addEventListener('change', function () { goTo(+pick.value); });
     // A resize changes the page width, so the saved scroll offset would land between two pages.
     addEventListener('resize', function () { deck.scrollLeft = active * deck.clientWidth; sizeDeck(); });
   })();
