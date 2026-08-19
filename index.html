@@ -456,9 +456,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .ovn-plays{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-bottom:16px}
 .ovn-play{box-sizing:border-box;min-width:0;border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:12px 13px;overflow-wrap:anywhere}
 .ovn-phd{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-bottom:9px}
-.ovn-badge{flex:none;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;background:rgba(31,30,27,.06);border:1px solid var(--line);font-size:9.5px;font-weight:600;letter-spacing:.02em;color:var(--fg-mute)}
+/* Sized for a RANK, not for two letters: bigger, tabular so 1..25 stay on one optical column, and
+   no letter-spacing, which existed to stop a two-letter pair reading as a word. */
+.ovn-badge{flex:none;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;background:rgba(31,30,27,.06);border:1px solid var(--line);font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--fg-mute)}
 .ovn-tkr{font-size:17px;font-weight:600;letter-spacing:-.01em;color:var(--fg)}
-.ovn-rank{flex:none;overflow-wrap:normal;font-size:9.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:rgba(31,30,27,.05);border:1px solid var(--line);color:var(--fg-mute)}
 .ovn-why{font-size:11.5px;line-height:1.5;color:var(--fg-dim);margin-bottom:10px}
 .ovn-why b{color:var(--fg);font-weight:600;font-variant-numeric:tabular-nums}
 .ovn-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
@@ -1977,9 +1978,14 @@ function renderHCM() {
             : 'Closed <b>' + Math.abs(c.score).toFixed(2) + '%</b> below its 250-session high.')
         : 'Ranked nearest its 250-session high.';
       return '<div class="ovn-play">' +
-        '<div class="ovn-phd"><span class="ovn-badge">' + escc(c.symbol.slice(0, 2)) + '</span>' +
+        // THE BADGE CARRIES THE RANK. It used to hold the ticker's first two letters — a fake
+        // avatar for a stock, repeating in small grey type what the line prints beside it in large
+        // bold. That chrome came from the event cards so the two books would read as one desk, and
+        // it outlived them. Rank is the one thing about a card that is NOT already on the line, and
+        // in the badge it reads straight down the column instead of trailing after each ticker.
+        '<div class="ovn-phd"><span class="ovn-badge">' + (i + 1) + '</span>' +
         '<span class="ovn-tkr">' + escc(c.symbol) + '</span>' +
-        '<span class="ovn-rank">#' + (i + 1) + '</span></div>' +
+        '</div>' +
         '<div class="ovn-why">' + why + '</div>' +
         '<div class="ovn-grid">' +
           '<div class="ovn-cell"><span class="ovn-lab">Entry · close</span>' +
