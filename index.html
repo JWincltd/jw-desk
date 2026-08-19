@@ -1696,8 +1696,17 @@ function renderHCM() {
   }
   function ivBanner() {
     if (!IV) return '';
+    // THE RUNNING RATE, NOT TODAY'S. One morning is ~7 calls sharing a single market shock, so 4/7
+    // and 5/7 are the same number and the daily figure told the reader nothing it could be held to.
+    // The cumulative carries its own denominator — calls AND days — so a young record cannot read
+    // as a verdict. Falls back to the daily line on an overlay published before `cumulative`
+    // existed, so an old board still renders.
     const sc = IV.scorecard || {};
-    const follow = sc.graded ? ' · <b>' + sc.following + '/' + sc.graded + '</b> pre-open calls following through' : '';
+    const cum = IV.cumulative;
+    const follow = cum && cum.graded
+      ? ' · <b>' + Math.round(cum.rate * 100) + '%</b> of pre-open calls follow through (' +
+        cum.following + '/' + cum.graded + ' over ' + cum.days + ' day' + (cum.days === 1 ? '' : 's') + ')'
+      : sc.graded ? ' · <b>' + sc.following + '/' + sc.graded + '</b> pre-open calls following through' : '';
     return '<div class="iv-banner"><span class="iv-dot"></span><span class="iv-lab">Intraday check</span>' +
       '<span>' + escc(IV.asOfET || '') + ' · +' + IV.minutesAfterOpen + ' min · ' + escc((IV.regime && IV.regime.note) || '') + follow + '</span></div>';
   }
