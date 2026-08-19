@@ -456,9 +456,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .ovn-plays{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-bottom:16px}
 .ovn-play{box-sizing:border-box;min-width:0;border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:12px 13px;overflow-wrap:anywhere}
 .ovn-phd{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-bottom:9px}
-/* Sized for a RANK, not for two letters: bigger, tabular so 1..25 stay on one optical column, and
-   no letter-spacing, which existed to stop a two-letter pair reading as a word. */
-.ovn-badge{flex:none;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;background:rgba(31,30,27,.06);border:1px solid var(--line);font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--fg-mute)}
+/* THE OLD RANK PILL'S SHAPE, IN THE BADGE'S SLOT. Kept round rather than the square box: a pill
+   reads as a label, a square reads as an avatar, and a rank is a label. `min-width` rather than a
+   fixed width so #1 and #25 sit on the same left edge instead of the ticker shifting between cards;
+   tabular figures hold the digits on one optical column inside it. */
+.ovn-badge{flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:34px;padding:3px 9px;border-radius:999px;background:rgba(31,30,27,.05);border:1px solid var(--line);font-size:11px;font-weight:600;letter-spacing:.03em;font-variant-numeric:tabular-nums;color:var(--fg-mute)}
 .ovn-tkr{font-size:17px;font-weight:600;letter-spacing:-.01em;color:var(--fg)}
 .ovn-why{font-size:11.5px;line-height:1.5;color:var(--fg-dim);margin-bottom:10px}
 .ovn-why b{color:var(--fg);font-weight:600;font-variant-numeric:tabular-nums}
@@ -1983,7 +1985,7 @@ function renderHCM() {
         // bold. That chrome came from the event cards so the two books would read as one desk, and
         // it outlived them. Rank is the one thing about a card that is NOT already on the line, and
         // in the badge it reads straight down the column instead of trailing after each ticker.
-        '<div class="ovn-phd"><span class="ovn-badge">' + (i + 1) + '</span>' +
+        '<div class="ovn-phd"><span class="ovn-badge">#' + (i + 1) + '</span>' +
         '<span class="ovn-tkr">' + escc(c.symbol) + '</span>' +
         '</div>' +
         '<div class="ovn-why">' + why + '</div>' +
