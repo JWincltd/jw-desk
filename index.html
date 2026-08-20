@@ -787,6 +787,19 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .dd-wrap{padding:6px 24px 60px;max-width:920px;width:100%;margin:0 auto}
 .dd-mono{font-family:'IBM Plex Mono',monospace}
 .dd-card{background:#fff;border:1px solid var(--line-2);border-radius:var(--r);padding:18px 20px 20px;margin-bottom:22px}
+/* The collapsed row for cards past DD_FULL. One line: bias dot, ticker, session, price, and the
+   trade itself — click opens the full card in place. `min-width:0` on the flex child is what lets
+   the ellipsis actually engage; without it a long setup string blows the row wider than the page. */
+.dd-row{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line-2);border-radius:var(--r);padding:11px 14px;margin-bottom:8px;cursor:pointer;transition:border-color .15s var(--ease)}
+.dd-row:hover,.dd-row:focus-visible{border-color:var(--fg-mute);outline:none}
+.dd-row-bias{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.dd-row-sym{font-size:14px;font-weight:600;flex:0 0 auto}
+.dd-row-date,.dd-row-px{font-family:var(--pt-mono);font-size:11px;color:var(--fg-mute);flex:0 0 auto}
+.dd-row-info{font-family:var(--pt-mono);font-size:11px;color:var(--fg-dim);margin-left:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dd-row-aside{color:var(--fg-mute);font-style:italic}
+.dd-row-chev{color:var(--fg-mute);font-size:15px;flex:0 0 auto;line-height:1}
+.dd-more{font-family:var(--pt-mono);font-size:11px;color:var(--fg-mute);margin:26px 0 10px;text-transform:uppercase;letter-spacing:.06em}
+@media(max-width:520px){.dd-row-px{display:none}}
 .dd-card h3{font-size:19px;font-weight:600;margin:0 0 2px}
 /* Header row so the live quote can sit top-right. h3 keeps its own inline layout (the bias pill
    relies on vertical-align), so the flexing happens on a wrapper, not on the heading itself.
@@ -3311,6 +3324,51 @@ function ddTradeHTML(su){
   return '<div class="dd-trade"><div class="tag" style="background:' + DD_C.amber + '">STAND ASIDE</div><div class="cells"><div class="note" style="border-top:none">' + ddEsc(su.note)
     + (su.rejected ? ' — rejected geometry: entry ' + ddMoney(su.rejected.entry) + ' / stop ' + ddMoney(su.rejected.stop) + ' / target ' + ddMoney(su.rejected.target) + ' = ' + su.rejected.rr + ':1' : '') + '</div></div></div>';
 }
+// HOW MANY CARDS GET THE FULL TREATMENT. Everything past this collapses to one line and opens on
+// click. A display constant and nothing else: every card below is the same card, carrying the same
+// setup and graded the same way in the swing ledger — this only decides what the eye lands on.
+//
+// It exists because the board is about to be fed automatically rather than by hand. A full card is
+// a long scroll, and a page that holds thirty of them is a page nobody reaches the bottom of; a
+// page that holds only six THROWS AWAY the rest, which is worse, because a swing card's horizon is
+// 21 sessions and it would be evicted within a day or two of being written.
+var DD_FULL = 6;
+
+// The collapsed line. Deliberately carries the TRADE, not just the name — a row that read only
+// "SLNO · 2026-08-19" would force a click to learn whether there is anything to do, which defeats
+// the point of collapsing. A stood-aside card says so in place of an entry, so the reason to skip
+// it is legible without opening it.
+function ddRowHTML(d, i){
+  var c = d.card || {}, su = c.setup || {};
+  var traded = su.stance === 'long' || su.stance === 'short';
+  // ENTRY AND R:R, and deliberately not the stop and target too. Those fit on a desktop and get
+  // ellipsed away on a phone — and what they ellipse away is the R:R, which is the one number that
+  // says whether the geometry pays. Two numbers that always render beat four that truncate.
+  var info = traded
+    ? (su.stance === 'short' ? 'short ' : 'buy ') + ddMoney(su.entry) + (su.rr != null ? ' · ' + su.rr + ':1' : '')
+    : 'stood aside';
+  return '<div class="dd-row" id="ddrow-' + i + '" role="button" tabindex="0"'
+    + ' onclick="ddExpandRow(' + i + ')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();ddExpandRow(' + i + ');}"'
+    + ' title="open the full card">'
+    + '<span class="dd-row-bias" style="background:' + ddBiasColor(c.bias) + '"></span>'
+    + '<b class="dd-row-sym">' + ddEsc(d.sym) + '</b>'
+    + '<span class="dd-row-date">' + ddEsc(d.tech ? d.tech.date : '') + '</span>'
+    + '<span class="dd-row-px">' + ddMoney(d.tech ? d.tech.price : null) + '</span>'
+    + '<span class="dd-row-info' + (traded ? '' : ' dd-row-aside') + '">' + ddEsc(info) + '</span>'
+    + '<span class="dd-row-chev">&#8250;</span></div>';
+}
+
+// Swap the row for the real card, in place, and mount its chart NOW — the per-entry mount loop
+// only reaches elements that already exist, so an expanded row would otherwise sit chartless until
+// the next visit to the page. ddLive already watches every symbol in DD, collapsed ones included,
+// so its next tick finds the newly created #ddlive-<i> with nothing to re-arm.
+function ddExpandRow(i){
+  var el = $('ddrow-' + i);
+  if (!el || !DD[i]) return;
+  el.outerHTML = ddCardHTML(DD[i], i);
+  mountDDChart(DD[i], i);
+}
+
 function ddCardHTML(d, i){
   var c = d.card;
   var h = '<div class="dd-card" id="ddc-' + i + '">';
@@ -3794,7 +3852,10 @@ function renderBstrat(){
     ddRendered = true;
     var host = $('ddList'), h = '';
     if (!DD.length) { host.innerHTML = '<div style="color:var(--fg-mute);padding:30px 0">no deep dives baked yet — run npm run card -- TICKER in jw-brief</div>'; return; }
-    DD.forEach(function(d, i){ h += ddCardHTML(d, i); });
+    DD.forEach(function(d, i){
+      if (i === DD_FULL) h += '<div class="dd-more">Earlier cards — ' + (DD.length - DD_FULL) + '</div>';
+      h += (i < DD_FULL ? ddCardHTML(d, i) : ddRowHTML(d, i));
+    });
     host.innerHTML = h;
   }
   // mounts re-run every entry — the per-chart dataset.mounted guard skips live charts, and a
