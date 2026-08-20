@@ -851,6 +851,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .wk-badge{display:inline-flex;align-items:center;font-family:var(--pt-mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;border-radius:999px;padding:3px 9px;border:1px solid currentColor}
 .wk-b-take{color:var(--amber);background:rgba(176,122,46,.10)}
 .wk-b-aside{color:var(--fg-mute);background:rgba(31,30,27,.05)}
+/* held: the position is on, so it stays legible rather than muted — but it is not the amber of
+   "take this week", because there is nothing to send. Distinct at a glance from both. */
+.wk-b-open{color:var(--fg-dim);background:transparent}
 .wk-b-win{color:var(--positive);background:rgba(74,135,98,.10)}
 .wk-b-loss{color:var(--danger);background:rgba(168,68,44,.10)}
 .wk-when{font-family:var(--pt-mono);font-size:11px;color:var(--fg-mute);margin-left:auto}
@@ -3652,6 +3655,36 @@ var ddLive = (function(){
   };
 }());
 var WK_LABEL = { open:'live', won:'kept the credit', partial:'partial loss', full:'capped loss', skipped:'stood aside', unpriced:'no quote' };
+
+// TODAY IN NEW YORK, as a plain YYYY-MM-DD string. `en-CA` formats exactly that way, which is the
+// point: the published dates are ISO strings, so comparing strings needs no Date parsing at all.
+// new Date('2026-08-20') would parse as UTC MIDNIGHT and read as the 19th anywhere west of
+// Greenwich, i.e. the badge would flip a day early for the person this board is built for.
+function wkTodayET(){
+  try { return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); }
+  catch (e) { return new Date().toISOString().slice(0,10); }
+}
+
+// WHERE AN OPEN WEEK SITS IN ITS OWN LIFE. `status:'open'` only means "entered and not yet
+// settled" — it stays open from the entry all the way to Friday's settlement job, so it cannot on
+// its own answer the question the badge was answering: is there anything to DO right now?
+//
+// It was answering "take this week" for the whole week. On a Thursday, against a spread expiring
+// Friday, that told the principal to put on a position that had been on since Monday and whose
+// entry price is four days gone. An instruction that outlives its window is worse than no
+// instruction, because it is indistinguishable from a live one.
+//
+// Compared against `entry`, NOT `week`: `week` is the Monday label, while the entry moves to
+// Tuesday when Monday is a market holiday. Falls back to `week` for a row published before the
+// backend carried `entry`, which is the old behaviour and no worse than it was.
+function wkPhase(w, today){
+  if (w.status !== 'open') return 'settled';
+  var entry = w.entry || w.week;
+  if (entry && today < entry) return 'pending';    // built ahead of its own entry session
+  if (entry && today === entry) return 'entry';    // entered today — the one day it is takeable
+  if (w.expiry && today > w.expiry) return 'awaiting';  // expired, settlement job has not run
+  return 'held';                                   // on the books, nothing to do
+}
 function wkMoney(v){ if (v == null) return '\u2014'; return (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString('en-US',{maximumFractionDigits:0}); }
 function wkNum(v, d){ return v == null ? '\u2014' : Number(v).toLocaleString('en-US',{minimumFractionDigits:d||0,maximumFractionDigits:d||0}); }
 function wkM(k, v){ return '<div class="wk-m"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>'; }
@@ -3664,15 +3697,24 @@ function renderWeekly(){
   var W = (typeof B !== 'undefined' && B.bstratWeekly) ? B.bstratWeekly : null;
   if (!W || !W.rows || !W.rows.length) { host.innerHTML = ''; return; }
   var rows = W.rows, R = W.record || {}, w = rows[0], live = w.status === 'open';
+  var phase = wkPhase(w, wkTodayET());
 
-  var badge = live ? '<span class="wk-badge wk-b-take">take this week</span>'
-    : w.status === 'won' ? '<span class="wk-badge wk-b-win">'+WK_LABEL[w.status]+'</span>'
-    : (w.status === 'partial' || w.status === 'full') ? '<span class="wk-badge wk-b-loss">'+WK_LABEL[w.status]+'</span>'
-    : '<span class="wk-badge wk-b-aside">'+WK_LABEL[w.status]+'</span>';
+  var badge = phase === 'entry' ? '<span class="wk-badge wk-b-take">take this week</span>'
+    : phase === 'held' ? '<span class="wk-badge wk-b-open">position open</span>'
+      : phase === 'awaiting' ? '<span class="wk-badge wk-b-aside">awaiting settlement</span>'
+        : phase === 'pending' ? '<span class="wk-badge wk-b-aside">opens '+w.entry+'</span>'
+          : w.status === 'won' ? '<span class="wk-badge wk-b-win">'+WK_LABEL[w.status]+'</span>'
+            : (w.status === 'partial' || w.status === 'full') ? '<span class="wk-badge wk-b-loss">'+WK_LABEL[w.status]+'</span>'
+              : '<span class="wk-badge wk-b-aside">'+WK_LABEL[w.status]+'</span>';
 
-  var act = live
+  // The verb carries the same distinction as the badge. "Sell / buy / collect" is an order to send;
+  // past the entry session the identical numbers describe a position already on, so they are stated
+  // as "short / long / credit". Same strikes, same money, no instruction.
+  var act = phase === 'entry' || phase === 'pending'
     ? 'Sell the <b>'+wkNum(w.shortStrike)+'</b> put &middot; buy the <b>'+wkNum(w.longStrike)+'</b> put<br><span class="amt">collect '+wkMoney(w.credit != null ? w.credit*100 : null)+'</span>'
-    : 'Week of '+w.week+' &mdash; '+WK_LABEL[w.status];
+    : (phase === 'held' || phase === 'awaiting')
+      ? 'Short the <b>'+wkNum(w.shortStrike)+'</b> put &middot; long the <b>'+wkNum(w.longStrike)+'</b> put<br><span class="amt">credit '+wkMoney(w.credit != null ? w.credit*100 : null)+'</span>'
+      : 'Week of '+w.week+' &mdash; '+WK_LABEL[w.status];
 
   var meta = wkM('expiry', w.expiry || '\u2014')
     + wkM('max loss', wkMoney(w.width != null ? w.width*100 : null))
@@ -3681,8 +3723,17 @@ function renderWeekly(){
     + (w.delta != null ? wkM('short delta', Number(w.delta).toFixed(3)) : '')
     + (w.iv != null ? wkM('implied vol', (w.iv*100).toFixed(1)+'%') : '');
 
+  // "Confirm at the broker before sending the order" belongs to the session the order is sent. Left
+  // up afterwards it is a second instruction outliving its window. Once the position is on, the same
+  // fact is stated as history: what the credit was recorded from, not what to do about it.
+  // ORDERED BY WHAT THE READER MOST NEEDS, not by which condition happens to match first. An
+  // expired-but-ungraded week is the state most likely to be misread as a stalled board, so it says
+  // so; the indicative caveat still travels, appended rather than dropped.
+  var indic = w.indicative ? 'Credit shown is the indicative quote recorded at entry on '+(w.entry || w.week)+', not a confirmed fill.' : '';
   var note = '';
-  if (live && w.indicative) note = '<div class="wk-note warn">Credit is indicative &mdash; quotes on this feed are delayed. Confirm the live credit at the broker before sending the order.</div>';
+  if ((phase === 'entry' || phase === 'pending') && w.indicative) note = '<div class="wk-note warn">Credit is indicative &mdash; quotes on this feed are delayed. Confirm the live credit at the broker before sending the order.</div>';
+  else if (phase === 'awaiting') note = '<div class="wk-note">Expired '+w.expiry+'. The settlement job grades it from the index close; until then it carries no P&amp;L.'+(indic ? ' '+indic : '')+'</div>';
+  else if (phase === 'held' && w.indicative) note = '<div class="wk-note">'+indic+'</div>';
   else if (w.status === 'skipped' || w.status === 'unpriced') note = '<div class="wk-note">'+(w.reason || 'Nothing was takeable this week.')+' A week where nothing was taken stays in the record at zero rather than being dropped.</div>';
 
   var rec = '<div class="wk-rec">'
@@ -3710,7 +3761,7 @@ function renderWeekly(){
   }
 
   host.innerHTML = '<div class="wk-h2">Weekly position</div>'
-    + '<div class="wk-card'+(live?' live':'')+'"><div class="wk-top">'+badge
+    + '<div class="wk-card'+((phase==='entry'||phase==='held')?' live':'')+'"><div class="wk-top">'+badge
     + '<span class="wk-when">'+(W.asof || '')+'</span></div>'
     + '<div class="wk-act">'+act+'</div><div class="wk-meta">'+meta+'</div>'+note+'</div>'
     + rec + hist;
