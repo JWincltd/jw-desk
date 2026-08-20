@@ -525,6 +525,12 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .ovn-sumbig{font-size:21px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
 .ovn-sumval{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--fg);white-space:nowrap}
 .ovn-sumnote{flex:1 1 100%;font-size:11px;line-height:1.5;color:var(--fg-mute)}
+/* THE SETTLING BANNER — a night the 9:45 grade partly filled. It sits WHERE THE SUMMARY WOULD BE,
+   because it is the answer to the same question ("how did the book do?"), and the honest answer
+   while names are missing is "not all in yet" rather than an average over part of the book. Muted
+   rather than alarming: this is the normal state of the newest night for an hour every morning. */
+.ovn-prov{box-sizing:border-box;margin-bottom:14px;padding:10px 13px;border:1px solid var(--line);border-radius:11px;background:var(--bg);font-size:11.5px;line-height:1.55;color:var(--fg-mute)}
+.ovn-prov b{color:var(--fg);font-weight:600}
 .ovn-rec{width:100%;max-width:100%;overflow-x:auto}
 .ovn-rec table{border-collapse:collapse;font-size:12px;min-width:320px}
 .ovn-rec th,.ovn-rec td{padding:5px 14px 5px 0;text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--fg)}
@@ -1915,7 +1921,8 @@ function renderHCM() {
     // A night is a PAGE. Older payloads carried a single night at the top level and no `nights`
     // array; that shape still renders, as a run of one, rather than blanking the band.
     var nights = (o.nights && o.nights.length) ? o.nights
-      : [{ asOf: o.asOf, settledAt: o.settledAt, summary: o.summary, featured: o.featured, cards: o.cards || [] }];
+      : [{ asOf: o.asOf, settledAt: o.settledAt, summary: o.summary, featured: o.featured,
+           provisional: o.provisional === true, pending: o.pending || 0, cards: o.cards || [] }];
     var rec = o.record || {}, byCost = rec.byCost || {};
     var WINDOW = 5;                 // how many nights you can swipe without leaving the window
     var winStart = 0;               // index into `nights` of the NEWEST night currently in the deck
@@ -1942,22 +1949,43 @@ function renderHCM() {
       return n.settledAt ? fmtDate(n.settledAt) : 'Bought ' + fmtDate(n.asOf);
     };
 
+    // A PROVISIONAL NIGHT is one the 9:45 grade partly filled. Those exits are FINAL — an opening
+    // print does not move — and the blanks are names the data feed had not published yet; they land
+    // on the 10:35 pass. It gets a banner instead of a summary, because an average over eighteen of
+    // twenty-five names is a number nobody traded, and putting one on the board is exactly the
+    // failure the split grade exists to prevent. The banner says what is missing and when it lands,
+    // so a half-filled book reads as in-progress rather than as a result.
+    var pendHTML = function (n) {
+      if (!n.provisional) return '';
+      var done = n.cards.length - n.pending;
+      return '<div class="ovn-prov"><b>Settling.</b> ' + done + ' of ' + n.cards.length +
+        ' opening prints are in and final; the remaining ' + n.pending +
+        (n.pending === 1 ? ' name has' : ' names have') + ' not published yet and settle by 10:35 ET. ' +
+        'The book’s return is withheld until every name is in — an average over part of the ' +
+        'book is a number nobody traded.</div>';
+    };
+
     // THIS NIGHT IN ONE LINE. Counted over the cards that SETTLED — a name with no opening print is
     // absent, not flat, so it is excluded from both the average and the win denominator and called
     // out separately. Absent entirely until something has settled: there is no average of nothing.
     var sumHTML = function (s) {
       if (!s || !s.settled) return '';
       var cls = s.avgPct > 0 ? 'ovn-pos' : s.avgPct < 0 ? 'ovn-neg' : '';
+      // "Book average" was the wrong NAME for the right number. Equal dollars go into all 25, so
+      // the book's return IS the average of the moves — but "average" reads as a statistic about
+      // the names, when it is the P&L on the position. Same arithmetic, and it is spelled out in
+      // the note below rather than left to be inferred from a label.
       return '<div class="ovn-sum">' +
-        '<div><span class="ovn-sumlab">Book average · gross</span>' +
+        '<div><span class="ovn-sumlab">Total · gross</span>' +
           '<span class="ovn-sumbig ' + cls + '">' + (s.avgPct > 0 ? '+' : '') + s.avgPct.toFixed(2) + '%</span></div>' +
         '<div><span class="ovn-sumlab">Won</span><span class="ovn-sumval">' + s.won + ' / ' + s.settled +
           '</span></div>' +
         (s.flat ? '<div><span class="ovn-sumlab">Flat</span><span class="ovn-sumval">' + s.flat + '</span></div>' : '') +
         (s.unsettled ? '<div><span class="ovn-sumlab">No opening print</span><span class="ovn-sumval">' +
           s.unsettled + '</span></div>' : '') +
-        '<div class="ovn-sumnote">Equal-weight average across the ' + s.settled + ' name' +
-          (s.settled === 1 ? '' : 's') + ' that settled, before costs' +
+        '<div class="ovn-sumnote">What the whole book made, before costs: equal dollars in each of ' +
+          'the ' + s.settled + ' name' + (s.settled === 1 ? '' : 's') + ' that settled, so the book’s ' +
+          'return is the average of their moves' +
           (s.unsettled ? ' — ' + s.unsettled + ' never printed an open and ' + (s.unsettled === 1 ? 'is' : 'are') +
             ' excluded rather than counted flat' : '') +
           '. Cost is charged in the table below, at every assumption.</div>' +
@@ -1966,20 +1994,31 @@ function renderHCM() {
 
     // One tile: rank, ticker, the move, and BOTH prices — entry is what was paid, exit is what it
     // sold at, and a tile that showed only one of them cannot be checked against anything.
-    var tile = function (c, rank) {
+    // WHAT AN EMPTY EXIT MEANS depends entirely on the night it sits in, and the three cases are
+    // different claims about the tape:
+    //   not graded yet  — the trade has not happened. "at the open".
+    //   provisional     — it happened, the feed has not published this name yet. "by 10:35".
+    //   settled         — the night is closed and this name never printed an open. "no print".
+    // One dash for all three would let the reader pick the wrong one, and the wrong one here is
+    // "this name lost", which is a number the tape never gave us.
+    var pendLabel = function (n) {
+      return n.provisional ? 'by 10:35' : n.settledAt ? 'no print' : 'at open';
+    };
+
+    var tile = function (c, rank, n) {
       var done = typeof c.retBps === 'number';
       var mark = done
         ? '<span class="ovn-tk ' + (c.retBps > 0 ? 'ovn-pos' : c.retBps < 0 ? 'ovn-neg' : '') + '">' +
           (c.retBps > 0 ? '+' : '') + (c.retBps / 100).toFixed(2) + '%</span>'
         : '<span class="ovn-tk">' + (typeof c.score === 'number' ? (c.score >= 0 ? '+' : '') + c.score.toFixed(1) + '%' : '') + '</span>';
-      // Pending stays "at open" rather than a dash: the exit has not happened, it is not missing.
-      var prices = money(c.entry) + ' → ' + (done ? money(c.exit) : '<span class="ovn-tpend">at open</span>');
+      // Pending stays a WORD rather than a dash: the exit has not happened, it is not missing.
+      var prices = money(c.entry) + ' → ' + (done ? money(c.exit) : '<span class="ovn-tpend">' + pendLabel(n) + '</span>');
       return '<div class="ovn-tile"><span class="ovn-tr">' + rank + '</span>' +
         '<span class="ovn-ts">' + escc(c.symbol) + '</span>' + mark +
         '<span class="ovn-te">' + prices + '</span></div>';
     };
 
-    var playCard = function (c, i) {
+    var playCard = function (c, i, n) {
       var settled = typeof c.retBps === 'number';
       var why = (typeof c.score === 'number')
         ? (c.score >= 0
@@ -2001,7 +2040,8 @@ function renderHCM() {
             '<span class="ovn-val">' + money(c.entry) + '</span></div>' +
           '<div class="ovn-cell"><span class="ovn-lab">Exit · open</span>' +
             (settled ? '<span class="ovn-val">' + money(c.exit) + '</span>'
-                     : '<span class="ovn-val pend">at the open</span>') + '</div>' +
+                     : '<span class="ovn-val pend">' + (n.provisional ? 'by 10:35 ET'
+                       : n.settledAt ? 'no opening print' : 'at the open') + '</span>') + '</div>' +
           (settled
             // Shown as a PERCENT, which is the scale a single name moves on — 549bps reads as an
             // abstraction, +5.49% reads as the trade. The book-level record below stays in bps
@@ -2028,7 +2068,7 @@ function renderHCM() {
       var half = Math.ceil(rest.length / 2);
       var column = function (from, to) {
         return '<div class="ovn-col">' + rest.slice(from, to).map(function (c, i) {
-          return tile(c, nFeat + from + i + 1);
+          return tile(c, nFeat + from + i + 1, n);
         }).join('') + '</div>';
       };
       var restHTML = rest.length
@@ -2036,9 +2076,9 @@ function renderHCM() {
           '</div><div class="ovn-tiles">' + column(0, half) + column(half, rest.length) + '</div>'
         : '';
       var syms = cards.length
-        ? '<div class="ovn-plays">' + cards.slice(0, nFeat).map(playCard).join('') + '</div>'
+        ? '<div class="ovn-plays">' + cards.slice(0, nFeat).map(function (c, i) { return playCard(c, i, n); }).join('') + '</div>'
         : '<div class="ovn-sub">No cards this night — the cross-section was too thin to rank. A count, not a result.</div>';
-      return '<div class="ovn-page">' + sumHTML(n.summary) + syms + restHTML + '</div>';
+      return '<div class="ovn-page">' + pendHTML(n) + sumHTML(n.summary) + syms + restHTML + '</div>';
     };
 
     // The record is shown at EVERY cost assumption, because five years of history cannot say what
@@ -2132,8 +2172,11 @@ function renderHCM() {
       $('ovnDate').textContent = nightLabel(n);
       // The pill is derived from the DATA, not from the reader's clock: a browser in another
       // timezone must not decide which trading night is "tonight".
+      // Three states, not two. "Tonight" means the trade has not happened yet; a PROVISIONAL night
+      // has already been sold into this morning's open and is waiting on the last few prints, so
+      // calling it "tonight" would tell the reader the opposite of what is true.
       $('ovnRel').innerHTML = !n.settledAt
-        ? '<span class="ovn-rel">' + (g === 0 ? 'Tonight' : 'Unsettled') + '</span>'
+        ? '<span class="ovn-rel">' + (n.provisional ? 'Settling' : g === 0 ? 'Tonight' : 'Unsettled') + '</span>'
         : (g === 0 ? '<span class="ovn-rel">Latest</span>' : '');
       // Gold for the night that is current, grey for anything already in the past. Keyed on the
       // SAME `g === 0` the pill uses, so the colour and the "Latest"/"Tonight" label can never
