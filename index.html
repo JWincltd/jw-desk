@@ -842,6 +842,39 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 @media(max-width:640px){.th-wrap{padding:6px 16px 120px}#thComposeDock{right:14px;bottom:14px}}
 
 /* ===== reports — the periodic desk report (holds the nav slot the firm used to) ===== */
+
+/* ===== weekly position block (top of the strat page) ===== */
+#wkBlock{display:flex;flex-direction:column;gap:12px;margin:0 0 26px}
+.wk-card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.wk-card.live{border-color:rgba(176,122,46,.45);box-shadow:0 1px 2px rgba(31,30,27,.05),0 8px 22px rgba(176,122,46,.10)}
+.wk-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.wk-badge{display:inline-flex;align-items:center;font-family:var(--pt-mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;border-radius:999px;padding:3px 9px;border:1px solid currentColor}
+.wk-b-take{color:var(--amber);background:rgba(176,122,46,.10)}
+.wk-b-aside{color:var(--fg-mute);background:rgba(31,30,27,.05)}
+.wk-b-win{color:var(--positive);background:rgba(74,135,98,.10)}
+.wk-b-loss{color:var(--danger);background:rgba(168,68,44,.10)}
+.wk-when{font-family:var(--pt-mono);font-size:11px;color:var(--fg-mute);margin-left:auto}
+.wk-act{font-family:var(--pt-mono);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.4;letter-spacing:-.01em}
+.wk-act .amt{color:var(--amber)}
+.wk-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px}
+.wk-m{display:flex;flex-direction:column;gap:1px}
+.wk-m .k{font-family:var(--pt-mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--fg-mute)}
+.wk-m .v{font-family:var(--pt-mono);font-size:13.5px;font-variant-numeric:tabular-nums;color:var(--fg)}
+.wk-note{font-size:12.5px;line-height:1.5;color:var(--fg-dim);border-left:3px solid var(--line-2);padding-left:11px}
+.wk-note.warn{border-left-color:var(--amber)}
+.wk-rec{display:flex;flex-wrap:wrap;gap:14px 22px;background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);padding:12px 16px}
+.wk-rec .wk-m .v{font-size:15px;font-weight:600}
+.wk-young{font-size:12px;line-height:1.5;color:var(--fg-mute);font-style:italic}
+.wk-hist{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:#fff}
+.wk-tbl{border-collapse:collapse;width:100%;font-size:12.5px;min-width:560px}
+.wk-tbl th{font-family:var(--pt-mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--fg-mute);font-weight:500;text-align:left;padding:8px 11px;background:var(--bg-2);border-bottom:1px solid var(--line);white-space:nowrap}
+.wk-tbl td{padding:8px 11px;border-bottom:1px solid var(--line);white-space:nowrap}
+.wk-tbl tr:last-child td{border-bottom:0}
+.wk-tbl td.n{font-family:var(--pt-mono);font-variant-numeric:tabular-nums;text-align:right}
+.wk-tbl td.pos{color:var(--positive);font-weight:600}
+.wk-tbl td.neg{color:var(--danger);font-weight:600}
+.wk-h2{font-family:var(--pt-mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--fg-mute)}
+@media(max-width:640px){.wk-act{font-size:15px}.wk-card{padding:14px}}
 #reports{position:fixed;inset:0;z-index:63;background:var(--bg);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .38s cubic-bezier(.4,0,.2,1)}
 #reports.shown{transform:none}
 #reports.shown ~ #chatDock{display:none}
@@ -1351,6 +1384,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <h1>Swing strat.</h1>
       <div class="th-sub">the deep dive on one name — evidence, levels, and a priced setup with the desk's arithmetic. every number observed, never invented.</div>
     </div>
+    <div id="wkBlock"></div>
     <div id="ddList"></div>
   </div>
 </div>
@@ -3617,7 +3651,72 @@ var ddLive = (function(){
     refresh: tick,   // called when swing strat becomes the page on top
   };
 }());
+var WK_LABEL = { open:'live', won:'kept the credit', partial:'partial loss', full:'capped loss', skipped:'stood aside', unpriced:'no quote' };
+function wkMoney(v){ if (v == null) return '\u2014'; return (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString('en-US',{maximumFractionDigits:0}); }
+function wkNum(v, d){ return v == null ? '\u2014' : Number(v).toLocaleString('en-US',{minimumFractionDigits:d||0,maximumFractionDigits:d||0}); }
+function wkM(k, v){ return '<div class="wk-m"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>'; }
+
+// The weekly index position, baked as B.bstratWeekly by the desk backend. Read-only: this block
+// never computes a level or a credit, it only renders what was published.
+function renderWeekly(){
+  var host = $('wkBlock');
+  if (!host) return;
+  var W = (typeof B !== 'undefined' && B.bstratWeekly) ? B.bstratWeekly : null;
+  if (!W || !W.rows || !W.rows.length) { host.innerHTML = ''; return; }
+  var rows = W.rows, R = W.record || {}, w = rows[0], live = w.status === 'open';
+
+  var badge = live ? '<span class="wk-badge wk-b-take">take this week</span>'
+    : w.status === 'won' ? '<span class="wk-badge wk-b-win">'+WK_LABEL[w.status]+'</span>'
+    : (w.status === 'partial' || w.status === 'full') ? '<span class="wk-badge wk-b-loss">'+WK_LABEL[w.status]+'</span>'
+    : '<span class="wk-badge wk-b-aside">'+WK_LABEL[w.status]+'</span>';
+
+  var act = live
+    ? 'Sell the <b>'+wkNum(w.shortStrike)+'</b> put &middot; buy the <b>'+wkNum(w.longStrike)+'</b> put<br><span class="amt">collect '+wkMoney(w.credit != null ? w.credit*100 : null)+'</span>'
+    : 'Week of '+w.week+' &mdash; '+WK_LABEL[w.status];
+
+  var meta = wkM('expiry', w.expiry || '\u2014')
+    + wkM('max loss', wkMoney(w.width != null ? w.width*100 : null))
+    + wkM('anchor close', wkNum(w.anchorClose,2))
+    + wkM('weekly range', wkNum(w.atr,2))
+    + (w.delta != null ? wkM('short delta', Number(w.delta).toFixed(3)) : '')
+    + (w.iv != null ? wkM('implied vol', (w.iv*100).toFixed(1)+'%') : '');
+
+  var note = '';
+  if (live && w.indicative) note = '<div class="wk-note warn">Credit is indicative &mdash; quotes on this feed are delayed. Confirm the live credit at the broker before sending the order.</div>';
+  else if (w.status === 'skipped' || w.status === 'unpriced') note = '<div class="wk-note">'+(w.reason || 'Nothing was takeable this week.')+' A week where nothing was taken stays in the record at zero rather than being dropped.</div>';
+
+  var rec = '<div class="wk-rec">'
+    + wkM('net', wkMoney(R.net)) + wkM('settled', wkNum(R.settled))
+    + wkM('won', wkNum(R.wins)) + wkM('lost', wkNum(R.losses))
+    + wkM('stood aside', wkNum(R.skipped))
+    + wkM('win rate', R.winRate == null ? '\u2014' : (R.winRate*100).toFixed(0)+'%')
+    + wkM('profit factor', R.profitFactor == null ? '\u2014' : Number(R.profitFactor).toFixed(2))
+    + '</div>'
+    + (R.tooYoung ? '<div class="wk-young">Too young to read \u2014 losses here resolve inside a single week while the gains accrue one credit at a time, so an early record reads better than it will finish.</div>' : '');
+
+  var hist = '';
+  if (rows.length > 1) {
+    var body = rows.map(function(r){
+      var cls = r.pnl == null ? '' : (r.pnl > 0 ? 'pos' : (r.pnl < 0 ? 'neg' : ''));
+      return '<tr><td>'+r.week+'</td><td class="n">'+wkNum(r.shortStrike)+' / '+wkNum(r.longStrike)+'</td>'
+        + '<td class="n">'+(r.credit == null ? '\u2014' : wkMoney(r.credit*100))+'</td>'
+        + '<td class="n">'+wkNum(r.settle,2)+'</td><td>'+WK_LABEL[r.status]+'</td>'
+        + '<td class="n '+cls+'">'+(r.pnl == null ? '\u2014' : wkMoney(r.pnl))+'</td></tr>';
+    }).join('');
+    hist = '<div class="wk-hist"><table class="wk-tbl"><thead><tr><th>week</th>'
+      + '<th style="text-align:right">short / wing</th><th style="text-align:right">credit</th>'
+      + '<th style="text-align:right">settled</th><th>outcome</th><th style="text-align:right">P&amp;L</th>'
+      + '</tr></thead><tbody>'+body+'</tbody></table></div>';
+  }
+
+  host.innerHTML = '<div class="wk-h2">Weekly position</div>'
+    + '<div class="wk-card'+(live?' live':'')+'"><div class="wk-top">'+badge
+    + '<span class="wk-when">'+(W.asof || '')+'</span></div>'
+    + '<div class="wk-act">'+act+'</div><div class="wk-meta">'+meta+'</div>'+note+'</div>'
+    + rec + hist;
+}
 function renderBstrat(){
+  renderWeekly();
   if (!ddRendered) {
     ddRendered = true;
     var host = $('ddList'), h = '';
