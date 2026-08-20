@@ -3665,6 +3665,28 @@ function wkTodayET(){
   catch (e) { return new Date().toISOString().slice(0,10); }
 }
 
+// The publish stamp, in the timezone the rest of this board speaks. The backend emits UTC ISO
+// ("2026-08-20T16:57Z") because that is the right thing to STORE; rendering it raw put a machine
+// timestamp in a surface where every other time is ET.
+//
+// Safe to parse, unlike a bare date: this string carries a time AND a Z, so it is unambiguous.
+// (new Date('2026-08-20') — no time — is the one that lands on UTC midnight and reads a day early.)
+// An unparseable value is returned AS-IS rather than blanked, so a format change upstream shows up
+// as something odd on the board instead of silently vanishing from it.
+function wkWhen(iso){
+  if (!iso) return '';
+  // A DATE WITH NO TIME IS NOT CONVERTED, IT IS PRINTED. "2026-08-20" parses as UTC midnight and
+  // would render "Aug 19, 20:00 ET" — a silently wrong day, which is worse than an ugly one. The
+  // backend always sends a time today; this is the guard for the day it stops.
+  if (String(iso).indexOf('T') < 0) return iso;
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  try {
+    return d.toLocaleString('en-US', { timeZone:'America/New_York', month:'short', day:'numeric',
+      hour:'2-digit', minute:'2-digit', hour12:false }) + ' ET';
+  } catch (e) { return iso; }
+}
+
 // WHERE AN OPEN WEEK SITS IN ITS OWN LIFE. `status:'open'` only means "entered and not yet
 // settled" — it stays open from the entry all the way to Friday's settlement job, so it cannot on
 // its own answer the question the badge was answering: is there anything to DO right now?
@@ -3762,7 +3784,7 @@ function renderWeekly(){
 
   host.innerHTML = '<div class="wk-h2">Weekly position</div>'
     + '<div class="wk-card'+((phase==='entry'||phase==='held')?' live':'')+'"><div class="wk-top">'+badge
-    + '<span class="wk-when">'+(W.asof || '')+'</span></div>'
+    + '<span class="wk-when">'+wkWhen(W.asof)+'</span></div>'
     + '<div class="wk-act">'+act+'</div><div class="wk-meta">'+meta+'</div>'+note+'</div>'
     + rec + hist;
 }
