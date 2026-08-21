@@ -798,6 +798,16 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .dd-row-info{font-family:var(--pt-mono);font-size:11px;color:var(--fg-dim);margin-left:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dd-row-aside{color:var(--fg-mute);font-style:italic}
 .dd-row-chev{color:var(--fg-mute);font-size:15px;flex:0 0 auto;line-height:1}
+/* SETTLED PLAYS. Light tints, not saturated ones — these are a record of what happened, and the
+   live ideas above them are what the eye should land on first. Three states because there are
+   three outcomes: a void is not a loss and must not be painted as one. */
+.dd-row-win{background:#F1F7F3;border-color:rgba(74,135,98,.35)}
+.dd-row-loss{background:#FBF2F0;border-color:rgba(168,68,44,.35)}
+.dd-row-void{background:var(--bg-2);border-color:var(--line-2)}
+.dd-row-win .dd-row-info,.dd-row-win .dd-row-mark{color:var(--positive)}
+.dd-row-loss .dd-row-info,.dd-row-loss .dd-row-mark{color:var(--danger)}
+.dd-row-void .dd-row-info,.dd-row-void .dd-row-mark{color:var(--fg-mute)}
+.dd-row-mark{flex:0 0 auto;width:12px;text-align:center;font-size:12px;line-height:1}
 .dd-more{font-family:var(--pt-mono);font-size:11px;color:var(--fg-mute);margin:26px 0 10px;text-transform:uppercase;letter-spacing:.06em}
 @media(max-width:520px){.dd-row-px{display:none}}
 .dd-card h3{font-size:19px;font-weight:600;margin:0 0 2px}
@@ -3338,8 +3348,48 @@ var DD_FULL = 6;
 // "SLNO · 2026-08-19" would force a click to learn whether there is anything to do, which defeats
 // the point of collapsing. A stood-aside card says so in place of an entry, so the reason to skip
 // it is legible without opening it.
+// HOW A FINISHED PLAY IS COLOURED — and why there are three answers, not two.
+//
+// A card that stopped out lost. A card that reached its target won. A card whose limit never
+// traded is VOID, and it is NEITHER: painting it red books a loss the desk never took, painting it
+// green claims a win it never had. Both voids on this board were CALLED CORRECTLY and missed only
+// on the entry rule (NVDA +1.06R as-called, INTC +0.55R), so they get their own neutral tint and
+// carry that reading rather than being rounded into a colour.
+//
+// Returns null for an OPEN play, which is what keeps a live idea rendering as a full card.
+function ddOutcome(d){
+  var p = d && d.play;
+  if (!p || !p.result) return null;
+  return p.result === 'win' ? 'win' : p.result === 'loss' ? 'loss' : 'void';
+}
+
+// What the settled row says instead of an entry. R is the desk's unit, so it leads; the as-called
+// reading follows only on a VOID, where the tactic has no R of its own and the call still does.
+function ddSettledInfo(p){
+  var r = (p.R == null) ? null : (p.R > 0 ? '+' : '') + (+p.R).toFixed(2) + 'R';
+  if (p.result === 'void') {
+    var ac = p.asCalled && p.asCalled.R != null
+      ? ' · as-called ' + (p.asCalled.R > 0 ? '+' : '') + (+p.asCalled.R).toFixed(2) + 'R'
+      : '';
+    return (p.reason || 'void') + ac;
+  }
+  return (p.reason || p.result) + (r ? ' · ' + r : '');
+}
+
 function ddRowHTML(d, i){
   var c = d.card || {}, su = c.setup || {};
+  var st = ddOutcome(d);
+  if (st) {
+    var p = d.play;
+    return '<div class="dd-row dd-row-' + st + '" id="ddrow-' + i + '" role="button" tabindex="0"'
+      + ' onclick="ddExpandRow(' + i + ')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();ddExpandRow(' + i + ');}"'
+      + ' title="settled — open the full card">'
+      + '<span class="dd-row-mark">' + (st === 'win' ? '&#10003;' : st === 'loss' ? '&#10007;' : '&#8212;') + '</span>'
+      + '<b class="dd-row-sym">' + ddEsc(d.sym) + '</b>'
+      + '<span class="dd-row-date">' + ddEsc(d.tech ? d.tech.date : '') + '</span>'
+      + '<span class="dd-row-info">' + ddEsc(ddSettledInfo(p)) + '</span>'
+      + '<span class="dd-row-chev">&#8250;</span></div>';
+  }
   var traded = su.stance === 'long' || su.stance === 'short';
   // ENTRY AND R:R, and deliberately not the stop and target too. Those fit on a desktop and get
   // ellipsed away on a phone — and what they ellipse away is the R:R, which is the one number that
@@ -3852,9 +3902,18 @@ function renderBstrat(){
     ddRendered = true;
     var host = $('ddList'), h = '';
     if (!DD.length) { host.innerHTML = '<div style="color:var(--fg-mute);padding:30px 0">no deep dives baked yet — run npm run card -- TICKER in jw-brief</div>'; return; }
+    // A SETTLED PLAY COLLAPSES WHEREVER IT SITS, and does not consume one of the full-card slots.
+    // Those six slots are for ideas you can still act on; a closed trade is a record, and giving it
+    // the same real estate as a live setup is how HL spent three weeks offering an entry the desk
+    // had already stopped out of. Only OPEN cards count toward DD_FULL.
+    var full = 0, divided = false;
     DD.forEach(function(d, i){
-      if (i === DD_FULL) h += '<div class="dd-more">Earlier cards — ' + (DD.length - DD_FULL) + '</div>';
-      h += (i < DD_FULL ? ddCardHTML(d, i) : ddRowHTML(d, i));
+      if (ddOutcome(d)) { h += ddRowHTML(d, i); return; }
+      if (full < DD_FULL) { full++; h += ddCardHTML(d, i); return; }
+      // The divider marks the OVERFLOW group only — settled rows carry their own meaning in their
+      // tint, and labelling them "earlier" would say something false about why they are collapsed.
+      if (!divided) { divided = true; h += '<div class="dd-more">Earlier cards</div>'; }
+      h += ddRowHTML(d, i);
     });
     host.innerHTML = h;
   }
