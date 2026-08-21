@@ -803,7 +803,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
    three outcomes: a void is not a loss and must not be painted as one. */
 .dd-row-win{background:#F1F7F3;border-color:rgba(74,135,98,.35)}
 .dd-row-loss{background:#FBF2F0;border-color:rgba(168,68,44,.35)}
-.dd-row-void{background:var(--bg-2);border-color:var(--line-2)}
+/* TRUE GREY, not the page's warm --bg-2. The win and loss tints are hued, so a beige neutral sat
+   between them reads as a third faint hue rather than as the absence of one. A void is the desk
+   declining to claim anything about the trade; the colour has to say that too. */
+.dd-row-void{background:#F2F2F1;border-color:rgba(31,30,27,.16)}
 .dd-row-win .dd-row-info,.dd-row-win .dd-row-mark{color:var(--positive)}
 .dd-row-loss .dd-row-info,.dd-row-loss .dd-row-mark{color:var(--danger)}
 .dd-row-void .dd-row-info,.dd-row-void .dd-row-mark{color:var(--fg-mute)}
