@@ -839,6 +839,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .dd-full-chart{flex:1;min-height:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
 .dd-full-hint{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--fg-mute);margin-top:8px;letter-spacing:.03em}
 .dd-expand{margin-left:0}
+/* The collapse control, top-right of the header and bottom-right of the card. `align-self:center`
+   because .dd-hd aligns on the BASELINE for its title, which would leave a bordered pill hanging
+   below the text it sits beside. */
+.dd-collapse{align-self:center;margin-left:8px}
+/* The icon-only variant. Padding is squared up so the tap target stays finger-sized rather than
+   shrinking with the label — a 9.5px glyph in a text-shaped pill is not something you can hit. */
+.dd-collapse-sm{padding:4px 9px;font-size:11px;line-height:1}
+.dd-foot{display:flex;justify-content:flex-end;margin-top:16px}
+.dd-foot .dd-collapse{margin-left:0}
 .dd-next{color:var(--fg-dim);font-size:11.5px;margin:7px 0 0;font-family:'IBM Plex Mono',monospace}
 .dd-tbl{width:100%;border-collapse:collapse;font-size:12.5px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .dd-tbl td,.dd-tbl th{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
@@ -3411,6 +3420,37 @@ function ddRowHTML(d, i){
     + '<span class="dd-row-chev">&#8250;</span></div>';
 }
 
+// EVERY card carries the control, not only the ones that started life as a row. A board where some
+// cards collapse and others do not is a board you have to remember the rules of; a board where the
+// arrow is always in the same two places is one you can use without thinking. Which cards start
+// open is still decided by the rules — settled and overflow collapse, the newest six open cards do
+// not — but that is the DEFAULT state, and the reader is free to disagree with it.
+// Two sizes, same control. The header sits beside a title that already wraps to two lines on a
+// phone, so a worded pill there steals width from the name of the thing you are reading — it is
+// the bare arrow. The foot has a row to itself and nothing to crowd, so it keeps the word, which
+// is also what makes the control discoverable the first time.
+// The label is on `title` and `aria-label` either way, so the icon-only one is not a mystery to a
+// screen reader or to a pointer that hovers.
+function ddCollapseBtn(i, compact){
+  return '<button class="dd-btn dd-collapse' + (compact ? ' dd-collapse-sm' : '') + '"'
+    + ' onclick="ddCollapseRow(' + i + ')"'
+    + ' title="collapse this card back to one line" aria-label="collapse card">'
+    + (compact ? '&#9652;' : 'collapse &#9652;') + '</button>';
+}
+
+// The way back. Disposes the chart before dropping the element: the library holds a resize
+// observer and its own canvases, and outerHTML alone would orphan both — expand/collapse a card a
+// dozen times and you would be carrying a dozen live charts for elements no longer in the page.
+//
+// `dataset.mounted` lives on the element being replaced, so it goes with it, and a later expand
+// mounts a fresh chart rather than finding a stale flag and rendering an empty box.
+function ddCollapseRow(i){
+  var el = $('ddc-' + i);
+  if (!el || !DD[i]) return;
+  if (ddCharts[i]) { try { ddCharts[i].chart.remove(); } catch (e) {} delete ddCharts[i]; }
+  el.outerHTML = ddRowHTML(DD[i], i);
+}
+
 // Swap the row for the real card, in place, and mount its chart NOW — the per-entry mount loop
 // only reaches elements that already exist, so an expanded row would otherwise sit chartless until
 // the next visit to the page. ddLive already watches every symbol in DD, collapsed ones included,
@@ -3427,7 +3467,8 @@ function ddCardHTML(d, i){
   var h = '<div class="dd-card" id="ddc-' + i + '">';
   // .hcm-live is the conviction card's live-quote styling, reused verbatim so the two match
   h += '<div class="dd-hd"><h3><span class="dd-bias" style="background:' + ddBiasColor(c.bias) + '">' + ddEsc(c.bias) + (c.bias === 'Neutral' ? ' · leaning ' + ddEsc(c.lean) : '') + '</span>' + ddEsc(d.sym) + ' — ' + ddEsc(d.name) + '</h3>'
-    + '<span class="hcm-live" id="ddlive-' + i + '"></span></div>';
+    + '<span class="hcm-live" id="ddlive-' + i + '"></span>'
+    + ddCollapseBtn(i, true) + '</div>';
   h += '<div class="dd-sub">' + ddMoney(d.tech.price) + ' · 1d ' + (d.tech.chg1d != null ? d.tech.chg1d.toFixed(1) : '—') + '% · 21-session ' + (d.tech.chg30d != null ? d.tech.chg30d.toFixed(1) : '—') + '% · as of ' + d.tech.date + '</div>';
   h += '<div class="dd-tldr"><b>TL;DR</b> — ' + ddEsc(c.tldr) + '<br><b>Read:</b> ' + ddEsc(c.read) + '</div>';
   h += ddTradeHTML(c.setup);
@@ -3450,6 +3491,11 @@ function ddCardHTML(d, i){
   (c.risks || []).forEach(function(s){ h += '<li>' + ddEsc(s) + '</li>'; });
   h += '</ul><div class="dd-h2">Bottom line</div><div class="dd-bl" style="border-left-color:' + ddBiasColor(c.bias) + '">' + ddEsc(c.bottomLine.call)
     + '<br><b>Trigger:</b> ' + ddEsc(c.bottomLine.trigger) + ' · <b>Invalidation:</b> ' + ddMoney(c.bottomLine.invalidation) + '</div>';
+  // The SECOND control, at the foot of the card. A swing card is a long scroll — chart, snapshot
+  // table, drivers, story, levels, risks — so by the time you have read it the header control is
+  // several screens away, and the only way back would be to scroll up to a button you are done
+  // with. One at each end means the way out is always within reach of where you are.
+  h += '<div class="dd-foot">' + ddCollapseBtn(i) + '</div>';
   return h + '</div>';
 }
 var ddCharts = {}, ddFull = null;
