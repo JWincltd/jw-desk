@@ -2021,6 +2021,29 @@ function renderHCM() {
       return n.settledAt ? fmtDate(n.settledAt) : 'Bought ' + fmtDate(n.asOf);
     };
 
+    // "TONIGHT" IS A CLAIM ABOUT TODAY, and it was being made by the pager rather than by the
+    // calendar. `g === 0` only means "the newest page", so a book bought at Friday's close still
+    // read TONIGHT on Saturday, on Sunday, and on Monday morning — telling the reader a trade was
+    // still ahead of them when the night had already been and gone.
+    //
+    // The old rule refused the reader's clock for a good reason: a browser in Sydney must not get
+    // to decide which trading night is "tonight". But that argues against the reader's TIMEZONE,
+    // not against the calendar. New York decides, computed on the reader's device — the same fix
+    // the weekly block uses. Comparing ISO date strings needs no Date parsing, so the UTC-midnight
+    // trap never comes near it.
+    //
+    // `<=` rather than `===`: a book stamped for a close that has not happened yet is still ahead
+    // of the reader, and clock skew must not turn it into history.
+    //
+    // If the timezone lookup throws, the payload's own reading stands rather than a guess.
+    var ovnWhenWord = function (n) {
+      var today;
+      try { today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); }
+      catch (e) { return 'Tonight'; }
+      if (!today || !n.asOf) return 'Tonight';
+      return today <= n.asOf ? 'Tonight' : 'Last night';
+    };
+
     // A PROVISIONAL NIGHT is one the 9:45 grade partly filled. Those exits are FINAL — an opening
     // print does not move — and the blanks are names the data feed had not published yet; they land
     // on the 10:35 pass. It gets a banner instead of a summary, because an average over eighteen of
@@ -2248,7 +2271,7 @@ function renderHCM() {
       // has already been sold into this morning's open and is waiting on the last few prints, so
       // calling it "tonight" would tell the reader the opposite of what is true.
       $('ovnRel').innerHTML = !n.settledAt
-        ? '<span class="ovn-rel">' + (n.provisional ? 'Settling' : g === 0 ? 'Tonight' : 'Unsettled') + '</span>'
+        ? '<span class="ovn-rel">' + (n.provisional ? 'Settling' : g === 0 ? ovnWhenWord(n) : 'Unsettled') + '</span>'
         : (g === 0 ? '<span class="ovn-rel">Latest</span>' : '');
       // Gold for the night that is current, grey for anything already in the past. Keyed on the
       // SAME `g === 0` the pill uses, so the colour and the "Latest"/"Tonight" label can never
