@@ -467,6 +467,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
    reads as a label, a square reads as an avatar, and a rank is a label. `min-width` rather than a
    fixed width so #1 and #25 sit on the same left edge instead of the ticker shifting between cards;
    tabular figures hold the digits on one optical column inside it. */
+.ovn-pend{color:var(--amber)}
 .ovn-badge{flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:34px;padding:3px 9px;border-radius:999px;background:rgba(31,30,27,.05);border:1px solid var(--line);font-size:11px;font-weight:600;letter-spacing:.03em;font-variant-numeric:tabular-nums;color:var(--fg-mute)}
 .ovn-tkr{font-size:17px;font-weight:600;letter-spacing:-.01em;color:var(--fg)}
 .ovn-why{font-size:11.5px;line-height:1.5;color:var(--fg-dim);margin-bottom:10px}
@@ -2053,11 +2054,13 @@ function renderHCM() {
     var pendHTML = function (n) {
       if (!n.provisional) return '';
       var done = n.cards.length - n.pending;
+      // The banner used to end "the book's return is withheld until every name is in". It no longer
+      // is — the running total sits directly above this — so that sentence would now contradict the
+      // number the reader is looking at. It says what is outstanding and when it lands instead.
       return '<div class="ovn-prov"><b>Settling.</b> ' + done + ' of ' + n.cards.length +
         ' opening prints are in and final; the remaining ' + n.pending +
         (n.pending === 1 ? ' name has' : ' names have') + ' not published yet and settle by 10:35 ET. ' +
-        'The book’s return is withheld until every name is in — an average over part of the ' +
-        'book is a number nobody traded.</div>';
+        'The total above is the return so far on the names that have reported.</div>';
     };
 
     // THIS NIGHT IN ONE LINE. Counted over the cards that SETTLED — a name with no opening print is
@@ -2070,20 +2073,36 @@ function renderHCM() {
       // the book's return IS the average of the moves — but "average" reads as a statistic about
       // the names, when it is the P&L on the position. Same arithmetic, and it is spelled out in
       // the note below rather than left to be inferred from a label.
+      // WHILE THE NIGHT IS STILL SETTLING the number is shown, and shown as running. The prints
+      // behind it are FINAL — an opening print does not move once it exists — so this is not an
+      // estimate awaiting revision; it is the real return on the part of the book that has reported.
+      // What it is NOT is the book's return, because the outstanding names have not contributed
+      // yet, so the label says "so far" and the settling count sits beside it rather than in a
+      // footnote. It stays off the all-time record regardless: that is keyed on settlement.
       return '<div class="ovn-sum">' +
-        '<div><span class="ovn-sumlab">Total · gross</span>' +
+        '<div><span class="ovn-sumlab">Total · gross' + (s.partial ? ' · so far' : '') + '</span>' +
           '<span class="ovn-sumbig ' + cls + '">' + (s.avgPct > 0 ? '+' : '') + s.avgPct.toFixed(2) + '%</span></div>' +
         '<div><span class="ovn-sumlab">Won</span><span class="ovn-sumval">' + s.won + ' / ' + s.settled +
           '</span></div>' +
+        (s.partial && s.pending ? '<div><span class="ovn-sumlab">Settling</span><span class="ovn-sumval ovn-pend">' +
+          s.pending + '</span></div>' : '') +
         (s.flat ? '<div><span class="ovn-sumlab">Flat</span><span class="ovn-sumval">' + s.flat + '</span></div>' : '') +
         (s.unsettled ? '<div><span class="ovn-sumlab">No opening print</span><span class="ovn-sumval">' +
           s.unsettled + '</span></div>' : '') +
-        '<div class="ovn-sumnote">What the whole book made, before costs: equal dollars in each of ' +
-          'the ' + s.settled + ' name' + (s.settled === 1 ? '' : 's') + ' that settled, so the book’s ' +
-          'return is the average of their moves' +
-          (s.unsettled ? ' — ' + s.unsettled + ' never printed an open and ' + (s.unsettled === 1 ? 'is' : 'are') +
-            ' excluded rather than counted flat' : '') +
-          '. Cost is charged in the table below, at every assumption.</div>' +
+        '<div class="ovn-sumnote">' +
+          (s.partial
+            ? 'Running, not final: ' + s.settled + ' of ' + (s.settled + (s.pending || 0)) + ' names have ' +
+              'reported and those prints are final — an opening print does not move. The remaining ' +
+              (s.pending || 0) + ' land by 10:35 ET and will move this number. It is the return on ' +
+              'the part of the book that has reported, not the book’s return, and it stays off the ' +
+              'all-time record until every name is in.'
+            : 'What the whole book made, before costs: equal dollars in each of ' +
+              'the ' + s.settled + ' name' + (s.settled === 1 ? '' : 's') + ' that settled, so the book’s ' +
+              'return is the average of their moves' +
+              (s.unsettled ? ' — ' + s.unsettled + ' never printed an open and ' + (s.unsettled === 1 ? 'is' : 'are') +
+                ' excluded rather than counted flat' : '') +
+              '. Cost is charged in the table below, at every assumption.') +
+          '</div>' +
         '</div>';
     };
 
