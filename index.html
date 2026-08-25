@@ -3951,11 +3951,20 @@ function renderWeekly(){
   // expired-but-ungraded week is the state most likely to be misread as a stalled board, so it says
   // so; the indicative caveat still travels, appended rather than dropped.
   var indic = w.indicative ? 'Credit shown is the indicative quote recorded at entry on '+(w.entry || w.week)+', not a confirmed fill.' : '';
+  // A LATE ENTRY IS STILL A REAL ENTRY, and the badge above is right to say so — but the credit is
+  // not the one the rule asked for, and without this line the week is indistinguishable from a
+  // normal one. Stated as its own note rather than folded into the indicative caveat, because the
+  // two are different facts: one is about the feed, this is about the clock.
+  var lateNote = w.lateSessions ? 'Entered '+w.lateSessions+' session'+(w.lateSessions === 1 ? '' : 's')
+    +' late — the '+(w.scheduledEntry || w.week)+' entry did not run. Same strikes and expiry (they come from the prior '
+    +'week’s close), but the credit was quoted on '+w.entry+'. The '+(w.scheduledEntry || w.week)
+    +' credit is unrecoverable and is not reconstructed.' : '';
   var note = '';
   if ((phase === 'entry' || phase === 'pending') && w.indicative) note = '<div class="wk-note warn">Credit is indicative &mdash; quotes on this feed are delayed. Confirm the live credit at the broker before sending the order.</div>';
   else if (phase === 'awaiting') note = '<div class="wk-note">Expired '+w.expiry+'. The settlement job grades it from the index close; until then it carries no P&amp;L.'+(indic ? ' '+indic : '')+'</div>';
   else if (phase === 'held' && w.indicative) note = '<div class="wk-note">'+indic+'</div>';
   else if (w.status === 'skipped' || w.status === 'unpriced') note = '<div class="wk-note">'+(w.reason || 'Nothing was takeable this week.')+' A week where nothing was taken stays in the record at zero rather than being dropped.</div>';
+  if (lateNote) note = '<div class="wk-note warn">'+lateNote+'</div>' + note;
 
   var rec = '<div class="wk-rec">'
     + wkM('net', wkMoney(R.net)) + wkM('settled', wkNum(R.settled))
