@@ -415,8 +415,17 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
    A flex track is as tall as its TALLEST child, and the pages are not the same height — an unsettled
    night has no summary band and no per-name "overnight" row — so the default left a dead gap under a
    short page, big enough to read as a rendering fault. */
+/* NO `-webkit-overflow-scrolling:touch` HERE, AND THAT IS THE FIX. It used to be on this rule, and
+   on iOS it is the reason a swipe could come to rest half-way through a night.
+   That property opts the element into Safari's LEGACY accelerated-scrolling path, which predates
+   CSS scroll-snap and does not implement it — so `scroll-snap-type:x mandatory` two declarations
+   away was being silently ignored on the one device this board is mostly read on. Desktop Chrome
+   and Safari never had the legacy path, which is why the deck always snapped correctly there and
+   the bug looked like it was not real.
+   It has also been unnecessary since iOS 13: momentum scrolling is the default now, so removing it
+   costs nothing and is what Apple's own guidance says to do. Do not put it back. */
 .ovn-deck{display:flex;align-items:flex-start;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;
-  overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:0 -2px;
+  overscroll-behavior-x:contain;scrollbar-width:none;margin:0 -2px;
   transition:height .22s var(--ease)}
 @media (prefers-reduced-motion:reduce){.ovn-deck{transition:none}}
 .ovn-deck::-webkit-scrollbar{display:none}
@@ -2305,12 +2314,24 @@ function renderHCM() {
       if (pick) pick.value = String(g);
     };
 
-    // The track collapses to the page you are looking at. Read from the page nearest the scroll
-    // position rather than from `active`, so the height is already right mid-swipe instead of
-    // snapping after it.
+    // The track collapses to the page you are looking at.
+    //
+    // WRITTEN ONLY WHEN THE DECK IS STILL. The comment here used to read "so the height is already
+    // right mid-swipe", and being right mid-swipe is precisely what broke the snap — see the scroll
+    // handler below. Every caller of sizeDeck is now either a programmatic move (a dot, an arrow,
+    // the picker, a re-render, a resize) or the settle after a gesture has finished.
+    //
+    // `lastH` is maintained here rather than at the call sites so a programmatic move and a gesture
+    // cannot disagree about what the deck's height currently is.
+    var lastH = '';
+    var setH = function (h) {
+      var v = h + 'px';
+      if (v === lastH) return;      // an identical write is still a style recalc; skip it
+      lastH = v; deck.style.height = v;
+    };
     var sizeDeck = function (i) {
       var pg = deck.children[i == null ? active : i];
-      if (pg) deck.style.height = pg.offsetHeight + 'px';
+      if (pg) setH(pg.offsetHeight);
     };
 
     // Rebuilds the deck for the current window. Called on first paint and whenever the picker moves
@@ -2347,16 +2368,63 @@ function renderHCM() {
     // The scroll position is the source of truth for which page is showing — the deck can be moved
     // by a finger, a trackpad, the arrows or the dots, and reading it back means every one of them
     // updates the head the same way instead of four code paths agreeing by luck.
-    var raf = 0;
+    //
+    // A SWIPE LANDS ON A NIGHT, NEVER BETWEEN TWO. The CSS has always said so — `scroll-snap-type:
+    // x mandatory` on the deck, `scroll-snap-align:start` and `scroll-snap-stop:always` on each
+    // page — and this handler was quietly cancelling it.
+    //
+    // sizeDeck writes `deck.style.height`, and `.ovn-deck` carries `transition:height .22s`. The
+    // old handler called it on EVERY animation frame of a scroll, so a finger drag mutated the
+    // geometry of the scroll container continuously. A layout change on a snap container during a
+    // gesture drops the pending snap in both WebKit and Blink, so the deck came to rest wherever
+    // the finger let go — half a night, which is not a thing anybody traded.
+    //
+    // The split that fixes it: the HEAD follows the scroll live (it writes text and classes, never
+    // geometry), and the HEIGHT is written exactly twice per gesture — once before it starts, once
+    // after it settles — and never in between.
+    var raf = 0, settleT = 0;
+    var pageAt = function () { return Math.round(deck.scrollLeft / (deck.clientWidth || 1)); };
+
+    // BEFORE the gesture, open the deck to the tallest page it can reach. Nothing clips while the
+    // finger moves, and this write happens while the deck is stationary — there is no snap in
+    // flight yet to cancel. Neighbours are ±1 and that is not a guess: `scroll-snap-stop:always`
+    // means a fling cannot skip past the adjacent page, so those three are every page reachable.
+    var openForGesture = function () {
+      var h = 0;
+      for (var k = active - 1; k <= active + 1; k++) {
+        var pg = deck.children[k];
+        if (pg && pg.offsetHeight > h) h = pg.offsetHeight;
+      }
+      if (h) setH(h);
+    };
+    deck.addEventListener('touchstart', openForGesture, { passive: true });
+    deck.addEventListener('pointerdown', openForGesture, { passive: true });
+    deck.addEventListener('wheel', openForGesture, { passive: true });
+
+    // AFTER it settles, close back to the page actually landed on.
+    var settle = function () {
+      var i = pageAt();
+      // Belt and braces: if the deck still came to rest between two pages — a browser with no snap
+      // support, or one that dropped it for its own reasons — put it on the page. Where the snap
+      // worked this is a no-op, because the deck is already at exactly this offset.
+      var want = i * deck.clientWidth;
+      if (Math.abs(deck.scrollLeft - want) > 1) deck.scrollLeft = want;
+      sizeDeck(i);
+    };
+
     deck.addEventListener('scroll', function () {
-      if (raf) return;
-      raf = requestAnimationFrame(function () {
+      if (!raf) raf = requestAnimationFrame(function () {
         raf = 0;
-        var w = deck.clientWidth || 1, i = Math.round(deck.scrollLeft / w);
-        sizeDeck(i);
+        var i = pageAt();
         if (i !== active) { active = i; paintHead(); }
       });
+      // `scrollend` is the right signal and fires after the snap animation finishes. iOS Safari
+      // only shipped it in 17 and this board is read on a phone, so a quiet-period timer backs it
+      // up. A browser that fires both just runs settle() twice on the same index, which is
+      // idempotent by construction.
+      clearTimeout(settleT); settleT = setTimeout(settle, 140);
     }, { passive: true });
+    if ('onscrollend' in deck) deck.addEventListener('scrollend', settle);
 
     dots.addEventListener('click', function (e) {
       var b = e.target.closest('.ovn-dot'); if (b) goTo(+b.dataset.g);
