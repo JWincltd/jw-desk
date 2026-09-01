@@ -535,6 +535,14 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .ovn-sumbig{font-size:21px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
 .ovn-sumval{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--fg);white-space:nowrap}
 .ovn-sumnote{flex:1 1 100%;font-size:11px;line-height:1.5;color:var(--fg-mute)}
+/* STRATEGY #2 sits directly under the book's band and is deliberately lighter than it: smaller
+   number, no border, muted ground. The published book's total must stay the thing the eye lands on
+   first — a second band of equal weight would read as two results of equal standing. */
+.ovn-alt{box-sizing:border-box;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 14px;margin:-8px 0 14px;padding:8px 14px;border-radius:9px;background:var(--bg-mute,rgba(127,127,127,.07))}
+.ovn-altlab{font-size:8.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-mute)}
+.ovn-altbig{font-size:14px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ovn-altval{font-size:11px;color:var(--fg-mute);font-variant-numeric:tabular-nums}
+.ovn-altnote{flex:1 1 100%;font-size:10.5px;line-height:1.5;color:var(--fg-mute)}
 /* THE SETTLING BANNER — a night the 9:45 grade partly filled. It sits WHERE THE SUMMARY WOULD BE,
    because it is the answer to the same question ("how did the book do?"), and the honest answer
    while names are missing is "not all in yet" rather than an average over part of the book. Muted
@@ -2115,6 +2123,33 @@ function renderHCM() {
         '</div>';
     };
 
+    // STRATEGY #2, ON THE SAME NIGHT. The same ranking with everything at or above the price
+    // ceiling removed, so it holds a SUBSET of the very same cards above — which is what makes the
+    // two numbers comparable rather than two readings of different windows.
+    //
+    // ONE NIGHT ONLY. The running record — how many nights in, how many to go before it means
+    // anything — is in the Friday review. An average of three nights in front of the reader every
+    // morning is how a count starts being read as a result.
+    //
+    // Rendered by the same rules as the band above: absent entirely until something settles (there
+    // is no average of nothing), and labelled "so far" while the night is still settling.
+    var shadowHTML = function (sh) {
+      if (!sh || !sh.summary || !sh.summary.settled) return '';
+      var s = sh.summary;
+      var cls = s.avgPct > 0 ? 'ovn-pos' : s.avgPct < 0 ? 'ovn-neg' : '';
+      return '<div class="ovn-alt">' +
+        '<span class="ovn-altlab">' + escc(sh.label) + (sh.note ? ' · ' + escc(sh.note) : '') +
+          (s.partial ? ' · so far' : '') + '</span>' +
+        '<span class="ovn-altbig ' + cls + '">' + (s.avgPct > 0 ? '+' : '') + s.avgPct.toFixed(2) + '%</span>' +
+        '<span class="ovn-altval">' + s.won + ' / ' + s.settled + ' won</span>' +
+        (s.partial && s.pending
+          ? '<span class="ovn-altval ovn-pend">' + s.pending + ' settling</span>' : '') +
+        '<span class="ovn-altnote">Same ranking' + (sh.note ? ', ' + escc(sh.note) + ' only' : '') +
+          '. Recorded beside the book, not part of it — this is the candidate, the total above is ' +
+          'what the desk published.</span>' +
+        '</div>';
+    };
+
     // One tile: rank, ticker, the move, and BOTH prices — entry is what was paid, exit is what it
     // sold at, and a tile that showed only one of them cannot be checked against anything.
     // WHAT AN EMPTY EXIT MEANS depends entirely on the night it sits in, and the three cases are
@@ -2201,7 +2236,8 @@ function renderHCM() {
       var syms = cards.length
         ? '<div class="ovn-plays">' + cards.slice(0, nFeat).map(function (c, i) { return playCard(c, i, n); }).join('') + '</div>'
         : '<div class="ovn-sub">No cards this night — the cross-section was too thin to rank. A count, not a result.</div>';
-      return '<div class="ovn-page">' + pendHTML(n) + sumHTML(n.summary) + syms + restHTML + '</div>';
+      return '<div class="ovn-page">' + pendHTML(n) + sumHTML(n.summary) + shadowHTML(n.shadow) +
+        syms + restHTML + '</div>';
     };
 
     // The record is shown at EVERY cost assumption, because five years of history cannot say what
