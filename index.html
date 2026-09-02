@@ -2610,7 +2610,7 @@ function renderTheses() {
     return '<div class="th-card">' +
       '<div class="th-top"><span class="th-title">' + escc(t.title) + '</span></div>' +
       '<div class="th-badges"><div class="th-badges-l">' +
-      (t.conviction ? '<span class="th-conv b-' + escc(t.conviction.band) + '">' + t.conviction.index + '%</span>' + dArrow(t.conviction.delta.day) + '<span class="th-bandword">' + escc(t.conviction.band) + '</span>' : bandChip(t.band)) +
+      (t.conviction ? '<span class="th-conv b-' + escc(t.conviction.band) + '" title="Conviction index, 0-100 — how a thesis is DEVELOPING. Not a probability and not a hit rate.">' + t.conviction.index + '</span>' + dArrow(t.conviction.delta.day) + '<span class="th-bandword">' + escc(t.conviction.band) + '</span>' : bandChip(t.band)) +
       (t.origin === 'scout' ? '<span class="th-chip scout">scout</span>' : '') + '</div>' +
       '<button class="hcm-info" data-th="' + i + '">▸ Details</button></div>' +
       (t.theme ? '<div class="th-meta" style="margin-top:2px"><span>theme — ' + escc(t.theme) + '</span></div>' : '') +
@@ -2621,7 +2621,7 @@ function renderTheses() {
           '<div class="th-pill" style="flex-direction:column;align-items:stretch;gap:3px"><span class="pp-lab">Latest move</span>' +
           t.conviction.drivers.map(function(d) { return '<div class="th-why"><span class="dot ' + escc(d.kind) + '"></span><span>' + escc(d.text) + '</span></div>'; }).join('') + '</div>' : '') +
         (t.conviction ?
-          '<div class="th-pill"><span class="pp-lab">Trend</span><span>conviction <b>' + t.conviction.index + '%</b> · day ' + dTxt(t.conviction.delta.day) + ' · wk ' + dTxt(t.conviction.delta.week) + ' · mo ' + dTxt(t.conviction.delta.month) + ' &nbsp; ' + sparkSVG(t.conviction.spark) + '</span></div>' : '') +
+          '<div class="th-pill"><span class="pp-lab">Trend</span><span>conviction <b>' + t.conviction.index + '/100</b> · day ' + dTxt(t.conviction.delta.day) + ' · wk ' + dTxt(t.conviction.delta.week) + ' · mo ' + dTxt(t.conviction.delta.month) + ' &nbsp; ' + sparkSVG(t.conviction.spark) + '</span></div>' : '') +
         (ev ? '<div style="margin-top:2px">' + ev + '</div>' : '') + '</div>' +
       '</div>';
   }).join('');
