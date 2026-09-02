@@ -2144,9 +2144,20 @@ function renderHCM() {
         '<span class="ovn-altval">' + s.won + ' / ' + s.settled + ' won</span>' +
         (s.partial && s.pending
           ? '<span class="ovn-altval ovn-pend">' + s.pending + ' settling</span>' : '') +
+        (sh.swapped != null
+          ? '<span class="ovn-altval">' + sh.swapped + ' of ' + (sh.swapped + sh.held) + ' names differ</span>'
+          : '') +
+        // THE SWAP COUNT IS THE POINT OF THIS NOTE. Both books hold the same NUMBER of names, so
+        // they can post identical win counts while differing underneath — the filter drops what is
+        // over the ceiling and backfills deeper down the same ranking. Without this line a reader
+        // seeing "3/25" on both is right to wonder whether the ceiling did anything at all.
         '<span class="ovn-altnote">Same ranking' + (sh.note ? ', ' + escc(sh.note) + ' only' : '') +
-          '. Recorded beside the book, not part of it — this is the candidate, the total above is ' +
-          'what the desk published.</span>' +
+          ' — it drops the names over the limit and backfills further down the list, so it holds ' +
+          'the same count' +
+          (sh.swapped === 0
+            ? ' and, tonight, exactly the same names.'
+            : ', not fewer. Recorded beside the book, not part of it: the total above is what the ' +
+              'desk published.') + '</span>' +
         '</div>';
     };
 
